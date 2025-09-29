@@ -1,0 +1,52 @@
+name: tindahan_ko_flutter
+description: Tindahan Ko - Para sa mga Reyna ng Tahanan
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI & Styling
+  velocity_x: ^4.1.2
+  styled_widget: ^0.4.1
+  google_fonts: ^6.1.0
+  
+  # Barcode Scanning
+  mobile_scanner: ^3.5.6
+  permission_handler: ^11.0.1
+  
+  # Database & Storage
+  sqflite: ^2.3.0
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.1
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Utilities
+  intl: ^0.18.1
+  uuid: ^4.1.0
+  vibration: ^1.8.4
+  
+  # File Operations
+  share_plus: ^7.2.1
+  file_picker: ^6.1.1
+  
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
