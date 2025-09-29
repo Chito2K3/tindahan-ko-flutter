@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tindahan Ko - Para sa mga Reyna ng Tahanan 👑</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+        }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .platform-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .platform-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .platform-card.disabled:hover {
+            transform: none;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .platform-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .platform-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .platform-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
+
+        .platform-status {
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status-available {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .status-coming-soon {
+            background: rgba(255, 193, 7, 0.3);
+        }
+
+        .features {
+            text-align: left;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .features h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature-item::before {
+            content: "✨";
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            .platforms {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏪</div>
+        <h1 class="title">Tindahan Ko</h1>
+        <p class="subtitle">Para sa mga Reyna ng Tahanan 👑</p>
+        
+        <div class="platforms">
+            <div class="platform-card" onclick="downloadAndroid()">
+                <div class="platform-icon">📱</div>
+                <div class="platform-name">Android</div>
+                <div class="platform-desc">Install native app on your smartphone</div>
+                <div class="platform-status status-available">Available</div>
+            </div>
+            
+            <div class="platform-card disabled">
+                <div class="platform-icon">🍎</div>
+                <div class="platform-name">iOS</div>
+                <div class="platform-desc">Coming soon to App Store</div>
+                <div class="platform-status status-coming-soon">Coming Soon</div>
+            </div>
+            
+            <div class="platform-card" onclick="openWebApp()">
+                <div class="platform-icon">🌐</div>
+                <div class="platform-name">Web</div>
+                <div class="platform-desc">Run in your browser (Chrome recommended)</div>
+                <div class="platform-status status-available">Available</div>
+            </div>
+        </div>
+
+        <div class="features">
+            <h3>🚀 Features</h3>
+            <div class="feature-list">
+                <div class="feature-item">Point of Sale (POS)</div>
+                <div class="feature-item">Inventory Management</div>
+                <div class="feature-item">Barcode Scanner</div>
+                <div class="feature-item">Sales Reports</div>
+                <div class="feature-item">Product Categories</div>
+                <div class="feature-item">Low Stock Alerts</div>
+                <div class="feature-item">Beautiful UI Design</div>
+                <div class="feature-item">Mobile Optimized</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadAndroid() {
+            // For now, show alert. Replace with actual APK download link
+            alert('Android APK download will be available soon!\n\nFor now, you can use the Web version.');
+            // Uncomment when APK is ready:
+            // window.open('path/to/your/app.apk', '_blank');
+        }
+
+        function openWebApp() {
+            // Replace with your actual Flutter web app URL
+            alert('Web app will open soon!\n\nThis will redirect to your Flutter web build.');
+            // Uncomment when web build is deployed:
+            // window.open('https://your-flutter-web-app.netlify.app', '_blank');
+        }
+
+        // Detect if user is on mobile for better UX
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // Add mobile-specific styling
+        if (isMobile()) {
+            document.body.style.padding = '1rem';
+        }
+    </script>
+</body>
+</html>
