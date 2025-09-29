@@ -205,10 +205,16 @@
 
     <script>
         function downloadAndroid() {
-            // For now, show alert. Replace with actual APK download link
-            alert('Android APK download will be available soon!\n\nFor now, you can use the Web version.');
-            // Uncomment when APK is ready:
-            // window.open('path/to/your/app.apk', '_blank');
+            // Create download link for APK
+            const link = document.createElement('a');
+            link.href = './tindahan-ko.apk'; // Place your APK file in the same directory
+            link.download = 'tindahan-ko.apk';
+            link.click();
+            
+            // Fallback alert if APK not found
+            setTimeout(() => {
+                alert('If download didn\'t start, please ensure APK file is uploaded to the server.');
+            }, 1000);
         }
 
         function openWebApp() {
