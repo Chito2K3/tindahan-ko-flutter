@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme.dart';
 import 'home_screen.dart';
@@ -13,87 +12,95 @@ class LandingScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App Logo
-              Column(
-                children: [
-                  Text(
-                    'Tindahan Ko',
-                    style: GoogleFonts.greatVibes(
-                      fontSize: 64,
-                      color: Colors.white,
-                      shadows: [
-                        const Shadow(
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
-                          color: Colors.black26,
-                        ),
-                      ],
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo
+                Column(
+                  children: [
+                    Text(
+                      'Tindahan Ko',
+                      style: GoogleFonts.greatVibes(
+                        fontSize: 64,
+                        color: Colors.white,
+                        shadows: [
+                          const Shadow(
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
+                            color: Colors.black26,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Para sa mga Reyna ng Tahanan 👑',
-                    style: GoogleFonts.dancingScript(
-                      fontSize: 24,
-                      color: AppTheme.lightPink,
-                      fontWeight: FontWeight.w600,
+                    Text(
+                      'Para sa mga Reyna ng Tahanan 👑',
+                      style: GoogleFonts.dancingScript(
+                        fontSize: 24,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
-              ).py32(),
-              
-              // Platform Selection
-              Column(
-                children: [
-                  Text(
-                    'Choose Platform:',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ).pb16(),
-                  
-                  // Android Button
-                  _PlatformButton(
-                    icon: '🤖',
-                    title: 'Android Version',
-                    subtitle: 'Native Android Experience',
-                    onTap: () => _navigateToApp(context, 'android'),
-                  ).pb12(),
-                  
-                  // iOS Button
-                  _PlatformButton(
-                    icon: '🍎',
-                    title: 'iOS Version',
-                    subtitle: 'Native iOS Experience',
-                    onTap: () => _navigateToApp(context, 'ios'),
-                  ).pb12(),
-                  
-                  // Web Button
-                  _PlatformButton(
-                    icon: '🌐',
-                    title: 'Web Version',
-                    subtitle: 'Cross-platform Web App',
-                    isSecondary: true,
-                    onTap: () => _navigateToApp(context, 'web'),
-                  ),
-                ],
-              ).px32(),
-              
-              const Spacer(),
-              
-              Text(
-                'Select your platform to experience the app!',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: AppTheme.lightPink,
+                  ],
                 ),
-                textAlign: TextAlign.center,
-              ).px32().pb32(),
-            ],
+                const SizedBox(height: 32),
+                
+                // Platform Selection
+                Column(
+                  children: [
+                    Text(
+                      'Choose Platform:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Android Button
+                    _PlatformButton(
+                      icon: '🤖',
+                      title: 'Android Version',
+                      subtitle: 'Native Android Experience',
+                      onTap: () => _navigateToApp(context, 'android'),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // iOS Button
+                    _PlatformButton(
+                      icon: '🍎',
+                      title: 'iOS Version',
+                      subtitle: 'Native iOS Experience',
+                      onTap: () => _navigateToApp(context, 'ios'),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Web Button
+                    _PlatformButton(
+                      icon: '🌐',
+                      title: 'Web Version',
+                      subtitle: 'Cross-platform Web App',
+                      isSecondary: true,
+                      onTap: () => _navigateToApp(context, 'web'),
+                    ),
+                  ],
+                ),
+                
+                const Spacer(),
+                
+                Text(
+                  'Select your platform to experience the app!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppTheme.lightPink,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
@@ -152,7 +159,7 @@ class _PlatformButton extends StatelessWidget {
                   icon,
                   style: const TextStyle(fontSize: 32),
                 ),
-                16.widthBox,
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/barcode_service.dart';
@@ -48,7 +47,7 @@ class _POSScreenState extends State<POSScreen> {
                       ),
                     ),
                   ),
-                  12.widthBox,
+                  const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
                       color: AppTheme.primaryPink,
@@ -60,7 +59,8 @@ class _POSScreenState extends State<POSScreen> {
                     ),
                   ),
                 ],
-              ).py16(),
+              ),
+              const SizedBox(height: 16),
               
               // Categories
               SizedBox(
@@ -81,7 +81,8 @@ class _POSScreenState extends State<POSScreen> {
                     ),
                   )).toList(),
                 ),
-              ).py16(),
+              ),
+              const SizedBox(height: 16),
               
               // Cart Section
               Expanded(
@@ -116,7 +117,7 @@ class _POSScreenState extends State<POSScreen> {
                             ),
                         ],
                       ),
-                      16.heightBox,
+                      const SizedBox(height: 16),
                       
                       // Cart Items
                       Expanded(
@@ -161,7 +162,7 @@ class _POSScreenState extends State<POSScreen> {
                                         item.product.emoji,
                                         style: const TextStyle(fontSize: 24),
                                       ),
-                                      12.widthBox,
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +190,7 @@ class _POSScreenState extends State<POSScreen> {
                                             icon: Icons.remove,
                                             onPressed: () => provider.updateCartQuantity(index, -1),
                                           ),
-                                          8.widthBox,
+                                          const SizedBox(width: 8),
                                           Text(
                                             '${item.quantity}',
                                             style: const TextStyle(
@@ -197,7 +198,7 @@ class _POSScreenState extends State<POSScreen> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          8.widthBox,
+                                          const SizedBox(width: 8),
                                           _QuantityButton(
                                             icon: Icons.add,
                                             onPressed: () => provider.updateCartQuantity(index, 1),
@@ -235,7 +236,7 @@ class _POSScreenState extends State<POSScreen> {
                             ),
                           ],
                         ),
-                        16.heightBox,
+                        const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(

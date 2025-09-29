@@ -12,8 +12,6 @@ dependencies:
     sdk: flutter
   
   # UI & Styling
-  velocity_x: ^4.1.2
-  styled_widget: ^0.4.1
   google_fonts: ^6.1.0
   
   # Barcode Scanning
@@ -47,6 +45,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
-    - assets/icons/

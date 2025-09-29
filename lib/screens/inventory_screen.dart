@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../utils/theme.dart';
@@ -26,7 +25,7 @@ class InventoryScreen extends StatelessWidget {
                       icon: '📦',
                     ),
                   ),
-                  12.widthBox,
+                  const SizedBox(width: 12),
                   Expanded(
                     child: _StatCard(
                       title: 'Low Stock',
@@ -36,7 +35,8 @@ class InventoryScreen extends StatelessWidget {
                     ),
                   ),
                 ],
-              ).py16(),
+              ),
+              const SizedBox(height: 16),
               
               // Products List
               const Text(
@@ -46,7 +46,8 @@ class InventoryScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
-              ).py8(),
+              ),
+              const SizedBox(height: 8),
               
               Expanded(
                 child: ListView.builder(
@@ -71,7 +72,7 @@ class InventoryScreen extends StatelessWidget {
                             product.emoji,
                             style: const TextStyle(fontSize: 32),
                           ),
-                          16.widthBox,
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +85,7 @@ class InventoryScreen extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                4.heightBox,
+                                const SizedBox(height: 4),
                                 Row(
                                   children: [
                                     Text(
@@ -94,7 +95,7 @@ class InventoryScreen extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    8.widthBox,
+                                    const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
@@ -113,7 +114,7 @@ class InventoryScreen extends StatelessWidget {
                                       ),
                                     ),
                                     if (product.hasBarcode) ...[
-                                      8.widthBox,
+                                      const SizedBox(width: 8),
                                       const Icon(
                                         Icons.qr_code,
                                         color: Colors.white70,
@@ -146,7 +147,7 @@ class InventoryScreen extends StatelessWidget {
                                 ),
                               ),
                               if (product.isLowStock) ...[
-                                4.heightBox,
+                                const SizedBox(height: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
@@ -214,7 +215,7 @@ class _StatCard extends StatelessWidget {
             icon,
             style: const TextStyle(fontSize: 32),
           ),
-          8.heightBox,
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
@@ -223,7 +224,7 @@ class _StatCard extends StatelessWidget {
               color: isWarning ? Colors.orange : Colors.white,
             ),
           ),
-          4.heightBox,
+          const SizedBox(height: 4),
           Text(
             title,
             style: const TextStyle(

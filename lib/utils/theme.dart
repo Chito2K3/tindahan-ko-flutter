@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryPink = Color(0xFFFF69B4);
-  static const Color secondaryPink = Color(0xFFFFB6C1);
-  static const Color lightPink = Color(0xFFFEEEF8);
-  static const Color darkPink = Color(0xFFE91E63);
+  static const Color primaryPink = Color(0xFFA2A2D0); // Blue Belle
+  static const Color secondaryPink = Color(0xFFB8B8E0);
+  static const Color lightPink = Color(0xFFE8E8F5);
+  static const Color darkPink = Color(0xFF7A7AB8);
   
   static final ThemeData theme = ThemeData(
-    primarySwatch: Colors.pink,
+    primarySwatch: Colors.blue,
     primaryColor: primaryPink,
     scaffoldBackgroundColor: Colors.transparent,
     textTheme: GoogleFonts.poppinsTextTheme(),
@@ -28,7 +28,7 @@ class AppTheme {
   );
   
   static const Gradient primaryGradient = LinearGradient(
-    colors: [primaryPink, Color(0xFFFF1493), Color(0xFFDC143C)],
+    colors: [primaryPink, Color(0xFF9090C8), Color(0xFF6B6BB0)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

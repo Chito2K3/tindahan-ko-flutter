@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../screens/landing_screen.dart';
@@ -23,7 +22,8 @@ class SettingsScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
-              ).py16(),
+              ),
+              const SizedBox(height: 16),
               
               Expanded(
                 child: ListView(

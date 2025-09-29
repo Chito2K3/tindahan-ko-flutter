@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:velocity_x/velocity_x.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../utils/theme.dart';
@@ -76,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white70,
                       ),
                     ),
-                    8.heightBox,
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
