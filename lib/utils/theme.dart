@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryPink = Color(0xFFA2A2D0); // Blue Belle
-  static const Color secondaryPink = Color(0xFFB8B8E0);
-  static const Color lightPink = Color(0xFFE8E8F5);
-  static const Color darkPink = Color(0xFF7A7AB8);
+  static const Color primaryPink = Color(0xFFE91E63); // Bright pink for buttons
+  static const Color darkBackground = Color(0xFF2D1B2E); // Dark purple background
+  static const Color cardBackground = Color(0xFF4A2C4A); // Purple card background
+  static const Color inputBackground = Color(0xFF5D3A5D); // Burgundy input fields
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFFB0B0B0);
   
   static final ThemeData theme = ThemeData(
-    primarySwatch: Colors.blue,
+    primarySwatch: Colors.pink,
     primaryColor: primaryPink,
-    scaffoldBackgroundColor: Colors.transparent,
-    textTheme: GoogleFonts.poppinsTextTheme(),
+    scaffoldBackgroundColor: darkBackground,
+    textTheme: GoogleFonts.poppinsTextTheme().apply(bodyColor: textPrimary, displayColor: textPrimary),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.transparent,
+      backgroundColor: darkBackground,
       elevation: 0,
-      foregroundColor: Colors.white,
+      foregroundColor: textPrimary,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -28,7 +30,7 @@ class AppTheme {
   );
   
   static const Gradient primaryGradient = LinearGradient(
-    colors: [primaryPink, Color(0xFF9090C8), Color(0xFF6B6BB0)],
+    colors: [darkBackground, cardBackground],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

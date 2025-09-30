@@ -151,9 +151,8 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: AppTheme.inputBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: TextFormField(
         controller: controller,
@@ -162,9 +161,9 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(icon, color: Colors.white70),
-          labelStyle: const TextStyle(color: Colors.white70),
-          hintStyle: const TextStyle(color: Colors.white54),
+          prefixIcon: Icon(icon, color: AppTheme.textSecondary),
+          labelStyle: TextStyle(color: AppTheme.textSecondary),
+          hintStyle: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
         ),

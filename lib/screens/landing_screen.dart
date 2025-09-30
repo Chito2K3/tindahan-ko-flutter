@@ -94,7 +94,7 @@ class LandingScreen extends StatelessWidget {
                   'Select your platform to experience the app!',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: AppTheme.lightPink,
+                    color: AppTheme.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),

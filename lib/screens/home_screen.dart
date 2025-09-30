@@ -63,10 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: AppTheme.cardBackground.withOpacity(0.3),
                   border: Border(
                     bottom: BorderSide(
-                      color: Colors.white.withOpacity(0.2),
+                      color: AppTheme.cardBackground,
                       width: 1,
                     ),
                   ),
@@ -113,10 +113,10 @@ class _HomeScreenState extends State<HomeScreen> {
       // Bottom Navigation
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: AppTheme.cardBackground.withOpacity(0.3),
           border: Border(
             top: BorderSide(
-              color: Colors.white.withOpacity(0.2),
+              color: AppTheme.cardBackground,
               width: 1,
             ),
           ),
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           selectedItemColor: AppTheme.primaryPink,
-          unselectedItemColor: Colors.white70,
+          unselectedItemColor: AppTheme.textSecondary,
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
