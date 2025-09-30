@@ -205,23 +205,67 @@
 
     <script>
         function downloadAndroid() {
+            // Show loading state
+            const androidCard = document.querySelector('.platform-card');
+            const originalContent = androidCard.innerHTML;
+            androidCard.innerHTML = `
+                <div class="platform-icon">⏳</div>
+                <div class="platform-name">Downloading...</div>
+                <div class="platform-desc">Starting APK download</div>
+                <div class="platform-status status-available">Please wait</div>
+            `;
+            
             // Create download link for APK
             const link = document.createElement('a');
-            link.href = './tindahan-ko.apk'; // Place your APK file in the same directory
+            link.href = './tindahan-ko.apk';
             link.download = 'tindahan-ko.apk';
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             
-            // Fallback alert if APK not found
+            // Show success message
             setTimeout(() => {
-                alert('If download didn\'t start, please ensure APK file is uploaded to the server.');
+                androidCard.innerHTML = `
+                    <div class="platform-icon">✅</div>
+                    <div class="platform-name">Download Started!</div>
+                    <div class="platform-desc">Check your downloads folder</div>
+                    <div class="platform-status status-available">45.4 MB APK</div>
+                `;
+                
+                // Show installation instructions
+                setTimeout(() => {
+                    alert('📱 Installation Instructions:\n\n1. Check your Downloads folder\n2. Tap on tindahan-ko.apk\n3. Allow "Install from unknown sources" if prompted\n4. Follow the installation steps\n\nNote: You may need to enable "Developer options" or "Unknown sources" in your Android settings.');
+                }, 500);
+                
+                // Reset after 5 seconds
+                setTimeout(() => {
+                    androidCard.innerHTML = originalContent;
+                }, 5000);
             }, 1000);
         }
 
         function openWebApp() {
-            // Replace with your actual Flutter web app URL
-            alert('Web app will open soon!\n\nThis will redirect to your Flutter web build.');
-            // Uncomment when web build is deployed:
-            // window.open('https://your-flutter-web-app.netlify.app', '_blank');
+            // Show loading state
+            const webCard = document.querySelectorAll('.platform-card')[2];
+            const originalContent = webCard.innerHTML;
+            webCard.innerHTML = `
+                <div class="platform-icon">⏳</div>
+                <div class="platform-name">Loading...</div>
+                <div class="platform-desc">Opening web version</div>
+                <div class="platform-status status-available">Please wait</div>
+            `;
+            
+            setTimeout(() => {
+                // Try to open the web build
+                try {
+                    window.open('./build/web/index.html', '_blank');
+                } catch (error) {
+                    alert('🌐 Web Version\n\nThe web version will be available soon!\n\nFor now, please download the Android APK or check back later for the web version.');
+                }
+                
+                // Reset the card
+                webCard.innerHTML = originalContent;
+            }, 1000);
         }
 
         // Detect if user is on mobile for better UX
