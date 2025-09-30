@@ -118,13 +118,6 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   Future<void> _initializeScanner() async {
     await BarcodeService.initialize();
     
-    if (kIsWeb) {
-      setState(() {
-        _hasPermission = true;
-      });
-      return;
-    }
-    
     final hasPermission = await BarcodeService.requestCameraPermission();
     setState(() {
       _hasPermission = hasPermission;
@@ -154,7 +147,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
           icon: const Icon(Icons.close, color: Colors.white),
         ),
         actions: [
-          if (_hasPermission && !kIsWeb) ...[
+          if (_hasPermission) ...[
             IconButton(
               onPressed: _toggleFlash,
               icon: Icon(
@@ -195,23 +188,6 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   }
 
   Widget _buildCameraScanner() {
-    if (kIsWeb) {
-      return Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.black,
-        child: const Center(
-          child: Text(
-            'Web Camera Scanner\n(Camera will open in browser)',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-            ),
-          ),
-        ),
-      );
-    }
     return MobileScanner(
       controller: _controller,
       onDetect: _onBarcodeDetected,
@@ -233,7 +209,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
                 return Transform.scale(
                   scale: 1.0 + (_pulseController.value * 0.1),
                   child: const Icon(
-                    Icons.qr_code_scanner,
+                    Icons.camera_alt,
                     size: 120,
                     color: Colors.white54,
                   ),
@@ -242,21 +218,43 @@ class _BarcodeScannerState extends State<BarcodeScanner>
             ),
             const SizedBox(height: 24),
             const Text(
-              'Camera Scanner',
+              'Camera Permission Required',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              kIsWeb 
-                  ? 'Use manual input for web testing'
-                  : 'Camera permission required',
-              style: const TextStyle(
+            const Text(
+              'Grant camera access to scan barcodes',
+              style: TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () async {
+                final hasPermission = await BarcodeService.requestCameraPermission();
+                setState(() {
+                  _hasPermission = hasPermission;
+                });
+                if (hasPermission) {
+                  _controller = MobileScannerController(
+                    detectionSpeed: DetectionSpeed.noDuplicates,
+                    facing: CameraFacing.back,
+                    torchEnabled: false,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF69B4),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Grant Camera Permission',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ],
