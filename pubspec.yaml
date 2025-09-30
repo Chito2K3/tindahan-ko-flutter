@@ -14,9 +14,9 @@ dependencies:
   # UI & Styling
   google_fonts: ^6.1.0
   
-  # Barcode Scanning (temporarily disabled for build)
-  # mobile_scanner: ^7.1.2
-  # permission_handler: ^12.0.1
+  # Barcode Scanning
+  mobile_scanner: ^5.2.3
+  permission_handler: ^12.0.1
   
   # Database & Storage
   sqflite: ^2.3.0
@@ -29,7 +29,8 @@ dependencies:
   # Utilities
   intl: ^0.18.1
   uuid: ^4.1.0
-  # vibration: ^1.8.4  # temporarily disabled
+  # vibration: ^1.8.4  # Disabled for APK build
+  audioplayers: ^6.1.0
   
   # File Operations (temporarily disabled for build)
   # share_plus: ^12.0.0
@@ -45,3 +46,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  assets:
+    - assets/sounds/

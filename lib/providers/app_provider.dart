@@ -131,6 +131,26 @@ class AppProvider extends ChangeNotifier {
     clearCart();
     notifyListeners();
   }
+  
+  void addProduct(Product product) {
+    _products.add(product);
+    notifyListeners();
+  }
+  
+  void updateProduct(Product updatedProduct) {
+    final index = _products.indexWhere((p) => p.id == updatedProduct.id);
+    if (index != -1) {
+      _products[index] = updatedProduct;
+      notifyListeners();
+    }
+  }
+  
+  void deleteProduct(String productId) {
+    _products.removeWhere((p) => p.id == productId);
+    // Also remove from cart if present
+    _cart.removeWhere((item) => item.product.id == productId);
+    notifyListeners();
+  }
 }
 
 class CartItem {
