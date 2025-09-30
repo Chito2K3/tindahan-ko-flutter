@@ -256,15 +256,8 @@
             `;
             
             setTimeout(() => {
-                // Try to open the web build
-                try {
-                    window.open('./build/web/index.html', '_blank');
-                } catch (error) {
-                    alert('🌐 Web Version\n\nThe web version will be available soon!\n\nFor now, please download the Android APK or check back later for the web version.');
-                }
-                
-                // Reset the card
-                webCard.innerHTML = originalContent;
+                // Open the web build in same window
+                window.location.href = './build/web/index.html';
             }, 1000);
         }
 
