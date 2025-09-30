@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_provider.dart';
 import '../utils/theme.dart';
 import 'pos_screen.dart';
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  String _storeName = '';
+  String _ownerName = '';
   
   late final List<Widget> _screens;
   
@@ -31,10 +34,20 @@ class _HomeScreenState extends State<HomeScreen> {
       const SettingsScreen(),
     ];
     
+    _loadStoreInfo();
+    
     // Load sample data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppProvider>().setPlatform(widget.platform);
       context.read<AppProvider>().loadSampleData();
+    });
+  }
+  
+  Future<void> _loadStoreInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _storeName = prefs.getString('store_name') ?? 'Tindahan Ko';
+      _ownerName = prefs.getString('owner_name') ?? 'Store Owner';
     });
   }
 
@@ -61,34 +74,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Tindahan Ko',
+                      _storeName,
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     Text(
-                      'Para sa mga Reyna ng Tahanan 👑',
+                      'Owned by $_ownerName',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Colors.white70,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${widget.platform.toUpperCase()} Version',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Para sa mga Reyna ng Tahanan 👑',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white60,
                       ),
                     ),
                   ],

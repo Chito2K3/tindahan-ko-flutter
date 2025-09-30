@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'screens/landing_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/store_setup_screen.dart';
+import 'screens/home_screen.dart';
 import 'providers/app_provider.dart';
 import 'utils/theme.dart';
 
@@ -21,8 +23,55 @@ class TindahanKoApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Tindahan Ko',
         theme: AppTheme.theme,
-        home: const LandingScreen(),
+        home: const InitialScreen(),
         debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
+
+class InitialScreen extends StatefulWidget {
+  const InitialScreen({super.key});
+
+  @override
+  State<InitialScreen> createState() => _InitialScreenState();
+}
+
+class _InitialScreenState extends State<InitialScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSetupStatus();
+  }
+
+  Future<void> _checkSetupStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isSetupComplete = prefs.getBool('is_setup_complete') ?? false;
+    
+    if (mounted) {
+      if (isSetupComplete) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(platform: 'android'),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StoreSetupScreen(),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }
