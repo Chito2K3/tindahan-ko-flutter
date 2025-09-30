@@ -32,25 +32,71 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                 children: [
                   const SizedBox(height: 40),
                   
-                  // Header
-                  Text(
-                    '🏪',
-                    style: const TextStyle(fontSize: 80),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tindahan Ko',
-                    style: GoogleFonts.greatVibes(
-                      fontSize: 48,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  // Header with stylized logo
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primaryPink, AppTheme.primaryPink.withOpacity(0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryPink.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    'Para sa mga Reyna ng Tahanan 👑',
-                    style: GoogleFonts.dancingScript(
-                      fontSize: 18,
-                      color: Colors.white.withOpacity(0.9),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Tindahan',
+                          style: GoogleFonts.dancingScript(
+                            fontSize: 48,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(2, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          'Ko',
+                          style: GoogleFonts.dancingScript(
+                            fontSize: 48,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(2, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Para sa mga Reyna ng Tahanan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          '👑',
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 40),
