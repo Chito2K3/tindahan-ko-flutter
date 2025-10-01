@@ -150,6 +150,18 @@ class AppProvider extends ChangeNotifier {
     }
   }
   
+  void updateCartQuantityByIncrement(int index, int change, int increment) {
+    final item = _cart[index];
+    final newQuantity = item.quantity + (change * increment);
+    
+    if (newQuantity <= 0) {
+      removeFromCart(index);
+    } else if (newQuantity <= item.product.stock) {
+      item.quantity = newQuantity;
+      notifyListeners();
+    }
+  }
+  
   void clearCart() {
     _cart.clear();
     notifyListeners();

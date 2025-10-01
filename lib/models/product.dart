@@ -1,3 +1,5 @@
+import '../utils/theme.dart';
+
 class Product {
   final String id;
   final String name;
@@ -82,16 +84,16 @@ class Product {
   
   String get displayPrice {
     if (!isBatchSelling || batchQuantity == null || batchPrice == null) {
-      return '₱${price.toStringAsFixed(2)}';
+      return AppTheme.formatCurrency(price);
     }
     
     // For batch-only selling
     if (price == 0.0) {
       final individualPrice = batchPrice! / batchQuantity!;
-      return '${batchQuantity}pcs for ₱${batchPrice!.toStringAsFixed(2)} (₱${individualPrice.toStringAsFixed(2)}/pc)';
+      return '${batchQuantity}pcs for ${AppTheme.formatCurrency(batchPrice!)} (${AppTheme.formatCurrency(individualPrice)}/pc)';
     }
     
     // For mixed selling
-    return '₱${price.toStringAsFixed(2)}/pc or ${batchQuantity}pcs for ₱${batchPrice!.toStringAsFixed(2)}';
+    return '${AppTheme.formatCurrency(price)}/pc or ${batchQuantity}pcs for ${AppTheme.formatCurrency(batchPrice!)}';
   }
 }

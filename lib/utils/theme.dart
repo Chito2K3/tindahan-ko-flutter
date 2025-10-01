@@ -13,7 +13,11 @@ class AppTheme {
     primarySwatch: Colors.pink,
     primaryColor: primaryPink,
     scaffoldBackgroundColor: darkBackground,
-    textTheme: GoogleFonts.poppinsTextTheme().apply(bodyColor: textPrimary, displayColor: textPrimary),
+    textTheme: GoogleFonts.poppinsTextTheme().apply(
+      bodyColor: textPrimary, 
+      displayColor: textPrimary,
+      fontFamilyFallback: ['Roboto', 'Arial', 'sans-serif'],
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: darkBackground,
       elevation: 0,
@@ -28,6 +32,11 @@ class AppTheme {
       ),
     ),
   );
+  
+  // Helper method to ensure peso sign displays correctly
+  static String formatCurrency(double amount) {
+    return '₱${amount.toStringAsFixed(2)}';
+  }
   
   static const Gradient primaryGradient = LinearGradient(
     colors: [darkBackground, cardBackground],

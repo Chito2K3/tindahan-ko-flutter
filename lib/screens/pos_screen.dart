@@ -278,7 +278,7 @@ class _POSScreenState extends State<POSScreen> {
                                               ),
                                             ),
                                             Text(
-                                              '₱${item.product.getPriceForQuantity(item.quantity).toStringAsFixed(2)}',
+                                              AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity)),
                                               style: const TextStyle(
                                                 color: Colors.white70,
                                                 fontSize: 12,
@@ -286,7 +286,7 @@ class _POSScreenState extends State<POSScreen> {
                                             ),
                                             if (item.product.isBatchSelling)
                                               Text(
-                                                '${item.product.batchQuantity}pcs = ₱${item.product.batchPrice!.toStringAsFixed(2)}',
+                                                'Batch: ${item.product.batchQuantity}pcs = ${AppTheme.formatCurrency(item.product.batchPrice!)}',
                                                 style: const TextStyle(
                                                   color: AppTheme.primaryPink,
                                                   fontSize: 10,
@@ -299,7 +299,7 @@ class _POSScreenState extends State<POSScreen> {
                                         children: [
                                           _QuantityButton(
                                             icon: Icons.remove,
-                                            onPressed: () => provider.updateCartQuantity(index, -1),
+                                            onPressed: () => _updateQuantity(provider, index, -1, item.product.isBatchSelling ? item.product.batchQuantity! : 1),
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
@@ -312,7 +312,7 @@ class _POSScreenState extends State<POSScreen> {
                                           const SizedBox(width: 8),
                                           _QuantityButton(
                                             icon: Icons.add,
-                                            onPressed: () => provider.updateCartQuantity(index, 1),
+                                            onPressed: () => _updateQuantity(provider, index, 1, item.product.isBatchSelling ? item.product.batchQuantity! : 1),
                                           ),
                                         ],
                                       ),
@@ -338,7 +338,7 @@ class _POSScreenState extends State<POSScreen> {
                               ),
                             ),
                             Text(
-                              '₱${provider.cartTotal.toStringAsFixed(2)}',
+                              AppTheme.formatCurrency(provider.cartTotal),
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -405,93 +405,213 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   void _processPayment(BuildContext context, AppProvider provider) {
+    final TextEditingController paymentController = TextEditingController();
+    double totalAmount = provider.cartTotal;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Row(
-          children: [
-            Icon(Icons.payment, color: AppTheme.primaryPink),
-            SizedBox(width: 8),
-            Text('Confirm Payment', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Order Summary:',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          double paymentAmount = double.tryParse(paymentController.text) ?? 0.0;
+          double change = paymentAmount - totalAmount;
+          bool isValidPayment = paymentAmount >= totalAmount;
+          
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Row(
+              children: [
+                Icon(Icons.payment, color: AppTheme.primaryPink),
+                SizedBox(width: 8),
+                Text('Process Payment', style: TextStyle(color: Colors.white)),
+              ],
             ),
-            const SizedBox(height: 8),
-            ...provider.cart.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${item.product.emoji} ${item.product.name} x${item.quantity}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  Text(
+                    'Order Summary:',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 120),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: provider.cart.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${item.product.emoji} ${item.product.name} x${item.quantity}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ),
+                              Text(
+                                AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity)),
+                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ),
                     ),
                   ),
-                  Text(
-                    '₱${item.product.getPriceForQuantity(item.quantity).toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  const Divider(color: Colors.white30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total Amount:',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        AppTheme.formatCurrency(totalAmount),
+                        style: const TextStyle(color: AppTheme.primaryPink, fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Payment Amount:',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: TextField(
+                      controller: paymentController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'Enter payment amount',
+                        hintStyle: const TextStyle(color: Colors.white54),
+                        prefixText: '₱',
+                        prefixStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (paymentAmount > 0) ..[
+                    if (isValidPayment) ..[
+                      if (change > 0) ..[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.withOpacity(0.5)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Change:',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                AppTheme.formatCurrency(change),
+                                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ..[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.withOpacity(0.5)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.blue, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Exact payment',
+                                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ] else ..[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.withOpacity(0.5)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.red, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Insufficient payment',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Need ${AppTheme.formatCurrency(totalAmount - paymentAmount)} more',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
               ),
-            )),
-            const Divider(color: Colors.white30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total Amount:',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              ),
+              ElevatedButton(
+                onPressed: isValidPayment && paymentAmount > 0 
+                    ? () => _confirmPayment(context, provider, paymentAmount, change)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isValidPayment && paymentAmount > 0 
+                      ? AppTheme.primaryPink 
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
                 ),
-                Text(
-                  '₱${provider.cartTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(color: AppTheme.primaryPink, fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Payment Method:',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.money, color: Colors.green, size: 20),
-                const SizedBox(width: 8),
-                const Text('Cash Payment', style: TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            onPressed: () => _confirmPayment(context, provider),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPink,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm Payment'),
-          ),
-        ],
+                child: const Text('Confirm Payment'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
   
-  void _confirmPayment(BuildContext context, AppProvider provider) async {
+  void _updateQuantity(AppProvider provider, int index, int change, int increment) {
+    provider.updateCartQuantityByIncrement(index, change, increment);
+  }
+  
+  void _confirmPayment(BuildContext context, AppProvider provider, double paymentAmount, double change) async {
     Navigator.pop(context); // Close confirmation dialog
     
     // Show processing dialog
@@ -518,6 +638,7 @@ class _POSScreenState extends State<POSScreen> {
       // Simulate processing time
       await Future.delayed(const Duration(seconds: 2));
       
+      double totalAmount = provider.cartTotal;
       await provider.completeSale();
       
       Navigator.pop(context); // Close processing dialog
@@ -541,10 +662,22 @@ class _POSScreenState extends State<POSScreen> {
               const Text('🎉', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 16),
               Text(
-                'Amount: ₱${provider.cartTotal.toStringAsFixed(2)}',
+                'Total: ${AppTheme.formatCurrency(totalAmount)}',
                 style: const TextStyle(color: AppTheme.primaryPink, fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
+              Text(
+                'Payment: ${AppTheme.formatCurrency(paymentAmount)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              if (change > 0) ..[
+                const SizedBox(height: 4),
+                Text(
+                  'Change: ${AppTheme.formatCurrency(change)}',
+                  style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+              const SizedBox(height: 12),
               const Text(
                 'Transaction completed successfully!',
                 style: TextStyle(color: Colors.white70),
