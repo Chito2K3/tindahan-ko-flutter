@@ -629,6 +629,7 @@ class _ProductDialog extends StatefulWidget {
 
 class _ProductDialogState extends State<_ProductDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _scrollController = ScrollController();
   late TextEditingController _nameController;
   late TextEditingController _priceController;
   late TextEditingController _stockController;
@@ -641,6 +642,18 @@ class _ProductDialogState extends State<_ProductDialog> {
   String _selectedEmoji = '📦';
   bool _hasBarcode = false;
   bool _isBatchSelling = false;
+  
+  void _ensureVisible() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
   
   final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food', 'candies'];
   final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫', '🍬'];
@@ -668,6 +681,7 @@ class _ProductDialogState extends State<_ProductDialog> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _priceController.dispose();
     _stockController.dispose();
@@ -680,20 +694,31 @@ class _ProductDialogState extends State<_ProductDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return Dialog(
       backgroundColor: Colors.grey[900],
-      title: Text(
-        widget.product == null ? 'Add Product' : 'Edit Product',
-        style: const TextStyle(color: Colors.white),
-      ),
-      content: SizedBox(
-        width: 300,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Text(
+              widget.product == null ? 'Add Product' : 'Edit Product',
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Column(
+                      children: [
                 Row(
                   children: [
                     DropdownButton<String>(
@@ -901,24 +926,34 @@ class _ProductDialogState extends State<_ProductDialog> {
                     style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
                   ),
                 ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _saveProduct,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryPink,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(widget.product == null ? 'Add' : 'Save'),
+                ),
               ],
             ),
-          ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-        ),
-        TextButton(
-          onPressed: _saveProduct,
-          child: Text(
-            widget.product == null ? 'Add' : 'Save',
-            style: const TextStyle(color: AppTheme.primaryPink),
-          ),
-        ),
-      ],
     );
   }
 

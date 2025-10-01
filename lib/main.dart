@@ -24,6 +24,12 @@ class TindahanKoApp extends StatelessWidget {
         theme: AppTheme.theme,
         home: const InitialScreen(),
         debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: child,
+          );
+        },
       ),
     );
   }
