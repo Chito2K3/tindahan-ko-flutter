@@ -75,9 +75,7 @@ A complete POS and Inventory Management System for Sari-Sari stores, built with 
 ## Download & Installation
 
 ### 📱 Android APK
-Download the latest APK from the `APK/` folder:
-- **Latest**: `tindahan-ko-v1.2.0-EXCEL-REPORTS.apk` (90.6MB)
-- **Previous**: `tindahan-ko-v1.1.3-TK-ICONS.apk`
+Build the APK locally using the instructions below.
 
 ### 🌐 Web Version
 Access the web version at: [Your Web URL]
