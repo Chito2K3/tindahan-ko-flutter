@@ -278,7 +278,7 @@ class _POSScreenState extends State<POSScreen> {
                                               ),
                                             ),
                                             Text(
-                                              AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity)),
+                                              AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)),
                                               style: const TextStyle(
                                                 color: Colors.white70,
                                                 fontSize: 12,
@@ -292,6 +292,26 @@ class _POSScreenState extends State<POSScreen> {
                                                   fontSize: 10,
                                                 ),
                                               ),
+                                            if (item.product.isCigarette)
+                                              GestureDetector(
+                                                onTap: () => provider.toggleCigaretteMode(index),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.primaryPink.withOpacity(0.2),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: AppTheme.primaryPink, width: 0.5),
+                                                  ),
+                                                  child: Text(
+                                                    item.isPackMode ? 'Pack Mode' : 'Piece Mode',
+                                                    style: const TextStyle(
+                                                      color: AppTheme.primaryPink,
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       ),
@@ -299,7 +319,7 @@ class _POSScreenState extends State<POSScreen> {
                                         children: [
                                           _QuantityButton(
                                             icon: Icons.remove,
-                                            onPressed: () => _updateQuantity(provider, index, -1, item.product.isBatchSelling ? item.product.batchQuantity! : 1),
+                                            onPressed: () => _updateQuantity(provider, index, -1, _getIncrement(item)),
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
@@ -312,7 +332,7 @@ class _POSScreenState extends State<POSScreen> {
                                           const SizedBox(width: 8),
                                           _QuantityButton(
                                             icon: Icons.add,
-                                            onPressed: () => _updateQuantity(provider, index, 1, item.product.isBatchSelling ? item.product.batchQuantity! : 1),
+                                            onPressed: () => _updateQuantity(provider, index, 1, _getIncrement(item)),
                                           ),
                                         ],
                                       ),
@@ -452,7 +472,7 @@ class _POSScreenState extends State<POSScreen> {
                                 ),
                               ),
                               Text(
-                                AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity)),
+                                AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)),
                                 style: const TextStyle(color: Colors.white70, fontSize: 12),
                               ),
                             ],
@@ -505,9 +525,9 @@ class _POSScreenState extends State<POSScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (paymentAmount > 0) ..[
-                    if (isValidPayment) ..[
-                      if (change > 0) ..[
+                  if (paymentAmount > 0) ...[
+                    if (isValidPayment) ...[
+                      if (change > 0) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -529,7 +549,7 @@ class _POSScreenState extends State<POSScreen> {
                             ],
                           ),
                         ),
-                      ] else ..[
+                      ] else ...[
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -549,7 +569,7 @@ class _POSScreenState extends State<POSScreen> {
                           ),
                         ),
                       ],
-                    ] else ..[
+                    ] else ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -605,6 +625,12 @@ class _POSScreenState extends State<POSScreen> {
         },
       ),
     );
+  }
+  
+  int _getIncrement(CartItem item) {
+    if (item.product.isBatchSelling) return item.product.batchQuantity!;
+    if (item.product.isCigarette && item.isPackMode) return item.product.piecesPerPack!;
+    return 1;
   }
   
   void _updateQuantity(AppProvider provider, int index, int change, int increment) {
@@ -670,7 +696,7 @@ class _POSScreenState extends State<POSScreen> {
                 'Payment: ${AppTheme.formatCurrency(paymentAmount)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-              if (change > 0) ..[
+              if (change > 0) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Change: ${AppTheme.formatCurrency(change)}',

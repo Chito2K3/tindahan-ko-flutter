@@ -13,6 +13,9 @@ class Product {
   final bool isBatchSelling;
   final int? batchQuantity;
   final double? batchPrice;
+  final bool isCigarette;
+  final int? piecesPerPack;
+  final double? packPrice;
 
   Product({
     required this.id,
@@ -27,6 +30,9 @@ class Product {
     this.isBatchSelling = false,
     this.batchQuantity,
     this.batchPrice,
+    this.isCigarette = false,
+    this.piecesPerPack,
+    this.packPrice,
   });
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +48,9 @@ class Product {
     'isBatchSelling': isBatchSelling,
     'batchQuantity': batchQuantity,
     'batchPrice': batchPrice,
+    'isCigarette': isCigarette,
+    'piecesPerPack': piecesPerPack,
+    'packPrice': packPrice,
   };
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -57,11 +66,23 @@ class Product {
     isBatchSelling: json['isBatchSelling'] ?? false,
     batchQuantity: json['batchQuantity'],
     batchPrice: json['batchPrice']?.toDouble(),
+    isCigarette: json['isCigarette'] ?? false,
+    piecesPerPack: json['piecesPerPack'],
+    packPrice: json['packPrice']?.toDouble(),
   );
 
   bool get isLowStock => stock <= reorderLevel;
   
-  double getPriceForQuantity(int quantity) {
+  double getPriceForQuantity(int quantity, {bool isPackMode = false}) {
+    // Cigarette pricing logic
+    if (isCigarette && piecesPerPack != null && packPrice != null) {
+      if (isPackMode) {
+        return quantity * packPrice!;
+      } else {
+        return quantity * price;
+      }
+    }
+    
     if (!isBatchSelling || batchQuantity == null || batchPrice == null) {
       return price * quantity;
     }
@@ -83,6 +104,11 @@ class Product {
   }
   
   String get displayPrice {
+    // Cigarette display price
+    if (isCigarette && piecesPerPack != null && packPrice != null) {
+      return '${AppTheme.formatCurrency(price)}/pc or ${AppTheme.formatCurrency(packPrice!)}/pack (${piecesPerPack}pcs)';
+    }
+    
     if (!isBatchSelling || batchQuantity == null || batchPrice == null) {
       return AppTheme.formatCurrency(price);
     }

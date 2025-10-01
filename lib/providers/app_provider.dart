@@ -13,7 +13,7 @@ class AppProvider extends ChangeNotifier {
   Map<String, dynamic> get storeInfo => _storeInfo;
   bool get isLoading => _isLoading;
   
-  double get cartTotal => _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity));
+  double get cartTotal => _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode));
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   
@@ -107,6 +107,20 @@ class AppProvider extends ChangeNotifier {
         hasBarcode: true,
         barcode: '8850006330012',
       ),
+      Product(
+        id: 'p7',
+        name: 'Marlboro Red',
+        price: 6.50,
+        stock: 200,
+        category: 'cigarette',
+        emoji: '🚬',
+        reorderLevel: 40,
+        hasBarcode: true,
+        barcode: '1234567890123',
+        isCigarette: true,
+        piecesPerPack: 20,
+        packPrice: 130.00,
+      ),
     ];
     
     for (final product in sampleProducts) {
@@ -124,11 +138,15 @@ class AppProvider extends ChangeNotifier {
     final existingIndex = _cart.indexWhere((item) => item.product.id == product.id);
     
     if (existingIndex >= 0) {
-      if (_cart[existingIndex].quantity < product.stock) {
-        _cart[existingIndex].quantity++;
+      final increment = product.isBatchSelling ? product.batchQuantity! : 
+                       (product.isCigarette && _cart[existingIndex].isPackMode ? product.piecesPerPack! : 1);
+      if (_cart[existingIndex].quantity + increment <= product.stock) {
+        _cart[existingIndex].quantity += increment;
       }
     } else {
-      _cart.add(CartItem(product: product, quantity: 1));
+      final initialQuantity = product.isBatchSelling ? product.batchQuantity! : 1;
+      final isPackMode = product.isCigarette && product.piecesPerPack != null;
+      _cart.add(CartItem(product: product, quantity: initialQuantity, isPackMode: isPackMode));
     }
     notifyListeners();
   }
@@ -152,7 +170,8 @@ class AppProvider extends ChangeNotifier {
   
   void updateCartQuantityByIncrement(int index, int change, int increment) {
     final item = _cart[index];
-    final newQuantity = item.quantity + (change * increment);
+    final actualIncrement = item.product.isCigarette && item.isPackMode ? item.product.piecesPerPack! : increment;
+    final newQuantity = item.quantity + (change * actualIncrement);
     
     if (newQuantity <= 0) {
       removeFromCart(index);
@@ -165,6 +184,21 @@ class AppProvider extends ChangeNotifier {
   void clearCart() {
     _cart.clear();
     notifyListeners();
+  }
+  
+  void toggleCigaretteMode(int index) {
+    if (index < _cart.length && _cart[index].product.isCigarette) {
+      _cart[index].isPackMode = !_cart[index].isPackMode;
+      // Adjust quantity based on mode
+      if (_cart[index].isPackMode) {
+        // Convert pieces to packs
+        _cart[index].quantity = (_cart[index].quantity / _cart[index].product.piecesPerPack!).ceil();
+      } else {
+        // Convert packs to pieces
+        _cart[index].quantity = _cart[index].quantity * _cart[index].product.piecesPerPack!;
+      }
+      notifyListeners();
+    }
   }
   
   Future<void> completeSale() async {
@@ -227,6 +261,7 @@ class AppProvider extends ChangeNotifier {
 class CartItem {
   final Product product;
   int quantity;
+  bool isPackMode;
   
-  CartItem({required this.product, required this.quantity});
+  CartItem({required this.product, required this.quantity, this.isPackMode = false});
 }
