@@ -305,36 +305,203 @@ class _POSScreenState extends State<POSScreen> {
   void _processPayment(BuildContext context, AppProvider provider) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Payment Successful! 🎉'),
-        content: Text('Total: ₱${provider.cartTotal.toStringAsFixed(2)}'),
+        backgroundColor: Colors.grey[900],
+        title: const Row(
+          children: [
+            Icon(Icons.payment, color: AppTheme.primaryPink),
+            SizedBox(width: 8),
+            Text('Confirm Payment', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Order Summary:',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...provider.cart.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${item.product.emoji} ${item.product.name} x${item.quantity}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
+                  Text(
+                    '₱${item.product.getPriceForQuantity(item.quantity).toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+            )),
+            const Divider(color: Colors.white30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total Amount:',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Text(
+                  '₱${provider.cartTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(color: AppTheme.primaryPink, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Payment Method:',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.money, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                const Text('Cash Payment', style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () async {
-              try {
-                await provider.completeSale();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sale completed successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error completing sale: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () => _confirmPayment(context, provider),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPink,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm Payment'),
           ),
         ],
       ),
     );
+  }
+  
+  void _confirmPayment(BuildContext context, AppProvider provider) async {
+    Navigator.pop(context); // Close confirmation dialog
+    
+    // Show processing dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: AppTheme.primaryPink),
+            const SizedBox(height: 16),
+            const Text(
+              'Processing payment...',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      // Simulate processing time
+      await Future.delayed(const Duration(seconds: 2));
+      
+      await provider.completeSale();
+      
+      Navigator.pop(context); // Close processing dialog
+      
+      // Show success dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 32),
+              SizedBox(width: 12),
+              Text('Payment Successful!', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 16),
+              Text(
+                'Amount: ₱${provider.cartTotal.toStringAsFixed(2)}',
+                style: const TextStyle(color: AppTheme.primaryPink, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Transaction completed successfully!',
+                style: TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Date: ${DateTime.now().toString().split('.')[0]}',
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sale completed successfully! 🎉'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPink,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close processing dialog
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Row(
+            children: [
+              Icon(Icons.error, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Payment Failed', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+          content: Text(
+            'Error: $e\n\nPlease try again.',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 
