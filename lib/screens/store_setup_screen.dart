@@ -21,6 +21,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
         child: SafeArea(
@@ -109,6 +110,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                   // Form Fields
                   Expanded(
                     child: SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
                       child: Column(
                         children: [
                           _buildTextField(
@@ -134,6 +136,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                             icon: Icons.location_on,
                             maxLines: 2,
                           ),
+                          const SizedBox(height: 100),
                         ],
                       ),
                     ),
