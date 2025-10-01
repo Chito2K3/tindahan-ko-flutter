@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../models/product.dart';
 import '../services/barcode_service.dart';
 import '../utils/theme.dart';
 
@@ -13,7 +14,60 @@ class POSScreen extends StatefulWidget {
 
 class _POSScreenState extends State<POSScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = 'all';
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _showSearchResults = false;
+  List<Product> _searchResults = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+  
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+  
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase().trim();
+    if (query.isEmpty) {
+      setState(() {
+        _showSearchResults = false;
+        _searchResults = [];
+      });
+      return;
+    }
+    
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    final results = provider.products.where((product) {
+      return product.name.toLowerCase().contains(query) ||
+             product.category.toLowerCase().contains(query) ||
+             (product.barcode?.contains(query) ?? false);
+    }).toList();
+    
+    setState(() {
+      _showSearchResults = true;
+      _searchResults = results;
+    });
+  }
+  
+  void _selectProduct(Product product) {
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    provider.addToCart(product);
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {
+      _showSearchResults = false;
+      _searchResults = [];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${product.name} added to cart!')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,63 +79,111 @@ class _POSScreenState extends State<POSScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Search and Scan
-              Row(
+              Column(
                 children: [
-                  Expanded(
-                    child: Container(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'Search products...',
+                              hintStyle: const TextStyle(color: Colors.white70),
+                              prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, color: Colors.white70),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _showSearchResults = false;
+                                          _searchResults = [];
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryPink,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () => _scanBarcode(context, provider),
+                          icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Search Results Dropdown
+                  if (_showSearchResults)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Search products...',
-                          hintStyle: TextStyle(color: Colors.white70),
-                          prefixIcon: Icon(Icons.search, color: Colors.white70),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
-                        ),
-                      ),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: _searchResults.isEmpty
+                          ? Container(
+                              padding: const EdgeInsets.all(16),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.search_off, color: Colors.white70),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Item doesn\'t exist',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _searchResults.length,
+                              itemBuilder: (context, index) {
+                                final product = _searchResults[index];
+                                return ListTile(
+                                  leading: Text(
+                                    product.emoji,
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  title: Text(
+                                    product.name,
+                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                  ),
+                                  subtitle: Text(
+                                    product.displayPrice,
+                                    style: const TextStyle(color: AppTheme.primaryPink, fontSize: 12),
+                                  ),
+                                  trailing: Text(
+                                    'Stock: ${product.stock}',
+                                    style: TextStyle(
+                                      color: product.isLowStock ? Colors.red : Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onTap: () => _selectProduct(product),
+                                );
+                              },
+                            ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPink,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: () => _scanBarcode(context, provider),
-                      icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                    ),
-                  ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              
-              // Categories
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _CategoryChip('all', 'All', _selectedCategory == 'all'),
-                    _CategoryChip('snacks', 'Snacks', _selectedCategory == 'snacks'),
-                    _CategoryChip('drinks', 'Drinks', _selectedCategory == 'drinks'),
-                    _CategoryChip('candies', 'Candies', _selectedCategory == 'candies'),
-                    _CategoryChip('household', 'Household', _selectedCategory == 'household'),
-                    _CategoryChip('personal', 'Personal', _selectedCategory == 'personal'),
-                  ].map((chip) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedCategory = chip.category),
-                      child: chip,
-                    ),
-                  )).toList(),
-                ),
               ),
               const SizedBox(height: 16),
               
@@ -505,34 +607,7 @@ class _POSScreenState extends State<POSScreen> {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  final String category;
-  final String label;
-  final bool isSelected;
 
-  const _CategoryChip(this.category, this.label, this.isSelected);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryPink : Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isSelected ? AppTheme.primaryPink : Colors.white.withOpacity(0.3),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-    );
-  }
-}
 
 class _QuantityButton extends StatelessWidget {
   final IconData icon;
