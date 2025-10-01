@@ -6,7 +6,7 @@ import '../models/product.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'tindahan_ko.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static const String _productsTable = 'products';
 
@@ -22,6 +22,7 @@ class DatabaseService {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -36,9 +37,20 @@ class DatabaseService {
         emoji TEXT NOT NULL,
         reorderLevel INTEGER NOT NULL,
         hasBarcode INTEGER NOT NULL,
-        barcode TEXT
+        barcode TEXT,
+        isBatchSelling INTEGER DEFAULT 0,
+        batchQuantity INTEGER,
+        batchPrice REAL
       )
     ''');
+  }
+  
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN isBatchSelling INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN batchQuantity INTEGER');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN batchPrice REAL');
+    }
   }
 
   // Product operations
@@ -102,6 +114,9 @@ class DatabaseService {
       'reorderLevel': product.reorderLevel,
       'hasBarcode': product.hasBarcode ? 1 : 0,
       'barcode': product.barcode,
+      'isBatchSelling': product.isBatchSelling ? 1 : 0,
+      'batchQuantity': product.batchQuantity,
+      'batchPrice': product.batchPrice,
     };
   }
 
@@ -116,6 +131,9 @@ class DatabaseService {
       reorderLevel: map['reorderLevel'],
       hasBarcode: map['hasBarcode'] == 1,
       barcode: map['barcode'],
+      isBatchSelling: map['isBatchSelling'] == 1,
+      batchQuantity: map['batchQuantity'],
+      batchPrice: map['batchPrice'],
     );
   }
 }

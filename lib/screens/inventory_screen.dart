@@ -432,16 +432,17 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
+                  Text(
+                    product.displayPrice,
+                    style: const TextStyle(
+                      color: AppTheme.primaryPink,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        '₱${product.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: AppTheme.primaryPink,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -459,6 +460,27 @@ class _ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (product.isBatchSelling) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPink.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'BATCH',
+                            style: TextStyle(
+                              color: AppTheme.primaryPink,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                       if (product.hasBarcode) ...[
                         const SizedBox(width: 8),
                         const Icon(
@@ -612,13 +634,16 @@ class _ProductDialogState extends State<_ProductDialog> {
   late TextEditingController _stockController;
   late TextEditingController _barcodeController;
   late TextEditingController _reorderController;
+  late TextEditingController _batchQuantityController;
+  late TextEditingController _batchPriceController;
   
   String _selectedCategory = 'snacks';
   String _selectedEmoji = '📦';
   bool _hasBarcode = false;
+  bool _isBatchSelling = false;
   
-  final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food'];
-  final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫'];
+  final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food', 'candies'];
+  final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫', '🍬'];
 
   @override
   void initState() {
@@ -628,11 +653,14 @@ class _ProductDialogState extends State<_ProductDialog> {
     _stockController = TextEditingController(text: widget.product?.stock.toString() ?? '');
     _barcodeController = TextEditingController(text: widget.product?.barcode ?? widget.barcode ?? '');
     _reorderController = TextEditingController(text: widget.product?.reorderLevel.toString() ?? '5');
+    _batchQuantityController = TextEditingController(text: widget.product?.batchQuantity?.toString() ?? '');
+    _batchPriceController = TextEditingController(text: widget.product?.batchPrice?.toString() ?? '');
     
     if (widget.product != null) {
       _selectedCategory = widget.product!.category;
       _selectedEmoji = widget.product!.emoji;
       _hasBarcode = widget.product!.hasBarcode;
+      _isBatchSelling = widget.product!.isBatchSelling;
     } else if (widget.barcode != null) {
       _hasBarcode = true;
     }
@@ -645,6 +673,8 @@ class _ProductDialogState extends State<_ProductDialog> {
     _stockController.dispose();
     _barcodeController.dispose();
     _reorderController.dispose();
+    _batchQuantityController.dispose();
+    _batchPriceController.dispose();
     super.dispose();
   }
 
@@ -696,26 +726,27 @@ class _ProductDialogState extends State<_ProductDialog> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceController,
-                        style: const TextStyle(color: Colors.white),
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Price (₱)',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
+                    if (!_isBatchSelling)
+                      Expanded(
+                        child: TextFormField(
+                          controller: _priceController,
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Price (₱)',
+                            labelStyle: TextStyle(color: Colors.white70),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white30),
+                            ),
                           ),
+                          validator: (value) {
+                            if (!_isBatchSelling && value?.isEmpty == true) return 'Required';
+                            if (!_isBatchSelling && double.tryParse(value!) == null) return 'Invalid number';
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
-                          if (double.tryParse(value!) == null) return 'Invalid number';
-                          return null;
-                        },
                       ),
-                    ),
-                    const SizedBox(width: 16),
+                    if (!_isBatchSelling) const SizedBox(width: 16),
                     Expanded(
                       child: TextFormField(
                         controller: _stockController,
@@ -804,6 +835,72 @@ class _ProductDialogState extends State<_ProductDialog> {
                       ),
                     ),
                   ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _isBatchSelling,
+                      activeColor: AppTheme.primaryPink,
+                      onChanged: (value) => setState(() => _isBatchSelling = value!),
+                    ),
+                    const Text('Batch Selling', style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
+                if (_isBatchSelling) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _batchQuantityController,
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Batch Quantity',
+                            labelStyle: TextStyle(color: Colors.white70),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white30),
+                            ),
+                            hintText: 'e.g. 3',
+                            hintStyle: TextStyle(color: Colors.white30),
+                          ),
+                          validator: (value) {
+                            if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
+                            if (_isBatchSelling && int.tryParse(value!) == null) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _batchPriceController,
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Batch Price (₱)',
+                            labelStyle: TextStyle(color: Colors.white70),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white30),
+                            ),
+                            hintText: 'e.g. 5.00',
+                            hintStyle: TextStyle(color: Colors.white30),
+                          ),
+                          validator: (value) {
+                            if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
+                            if (_isBatchSelling && double.tryParse(value!) == null) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Example: 3 pieces for ₱5.00',
+                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                  ),
+                ],
               ],
             ),
           ),
@@ -831,13 +928,16 @@ class _ProductDialogState extends State<_ProductDialog> {
     final product = Product(
       id: widget.product?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text,
-      price: double.parse(_priceController.text),
+      price: _isBatchSelling ? 0.0 : double.parse(_priceController.text),
       stock: int.parse(_stockController.text),
       category: _selectedCategory,
       emoji: _selectedEmoji,
       reorderLevel: int.parse(_reorderController.text),
       hasBarcode: _hasBarcode,
       barcode: _hasBarcode ? _barcodeController.text : null,
+      isBatchSelling: _isBatchSelling,
+      batchQuantity: _isBatchSelling ? int.parse(_batchQuantityController.text) : null,
+      batchPrice: _isBatchSelling ? double.parse(_batchPriceController.text) : null,
     );
 
     try {

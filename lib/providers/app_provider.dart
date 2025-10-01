@@ -13,7 +13,7 @@ class AppProvider extends ChangeNotifier {
   Map<String, dynamic> get storeInfo => _storeInfo;
   bool get isLoading => _isLoading;
   
-  double get cartTotal => _cart.fold(0, (sum, item) => sum + (item.product.price * item.quantity));
+  double get cartTotal => _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity));
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   
@@ -50,6 +50,19 @@ class AppProvider extends ChangeNotifier {
         reorderLevel: 10,
         hasBarcode: true,
         barcode: '4800016644931',
+      ),
+      Product(
+        id: 'p6',
+        name: 'Mentos Candy',
+        price: 2.00,
+        stock: 100,
+        category: 'candies',
+        emoji: '🍬',
+        reorderLevel: 20,
+        hasBarcode: false,
+        isBatchSelling: true,
+        batchQuantity: 3,
+        batchPrice: 5.00,
       ),
       Product(
         id: 'p2',

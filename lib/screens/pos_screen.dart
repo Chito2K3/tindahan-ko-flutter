@@ -71,6 +71,7 @@ class _POSScreenState extends State<POSScreen> {
                     _CategoryChip('all', 'All', _selectedCategory == 'all'),
                     _CategoryChip('snacks', 'Snacks', _selectedCategory == 'snacks'),
                     _CategoryChip('drinks', 'Drinks', _selectedCategory == 'drinks'),
+                    _CategoryChip('candies', 'Candies', _selectedCategory == 'candies'),
                     _CategoryChip('household', 'Household', _selectedCategory == 'household'),
                     _CategoryChip('personal', 'Personal', _selectedCategory == 'personal'),
                   ].map((chip) => Padding(
@@ -175,12 +176,20 @@ class _POSScreenState extends State<POSScreen> {
                                               ),
                                             ),
                                             Text(
-                                              '₱${item.product.price.toStringAsFixed(2)}',
+                                              '₱${item.product.getPriceForQuantity(item.quantity).toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 color: Colors.white70,
                                                 fontSize: 12,
                                               ),
                                             ),
+                                            if (item.product.isBatchSelling)
+                                              Text(
+                                                '${item.product.batchQuantity}pcs = ₱${item.product.batchPrice!.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  color: AppTheme.primaryPink,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       ),
