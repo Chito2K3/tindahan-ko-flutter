@@ -32,9 +32,13 @@ dependencies:
   # vibration: ^1.8.4  # Disabled for APK build
   audioplayers: ^6.1.0
   
-  # File Operations (temporarily disabled for build)
-  # share_plus: ^12.0.0
-  # file_picker: ^8.1.2
+  # Charts & Graphs
+  fl_chart: ^0.68.0
+  
+  # File Operations
+  excel: ^4.0.6
+  file_picker: ^8.1.2
+  universal_html: ^2.2.4
   
   # Notifications (temporarily disabled for build)
   # flutter_local_notifications: ^19.4.2

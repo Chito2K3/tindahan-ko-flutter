@@ -22,7 +22,8 @@ class LandingScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Tindahan Ko',
-                      style: GoogleFonts.greatVibes(
+                      style: GoogleFonts.getFont(
+                        'Imperial Script',
                         fontSize: 64,
                         color: Colors.white,
                         shadows: [
@@ -111,7 +112,7 @@ class LandingScreen extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => HomeScreen(platform: platform),
+        builder: (context) => const HomeScreen(),
       ),
     );
   }

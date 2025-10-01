@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TK Favicon Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Imperial+Script&display=swap');
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="512" height="512"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+        gradient.addColorStop(0, '#E91E63'); // Pink
+        gradient.addColorStop(1, '#AD1457'); // Darker pink
+        
+        // Fill background
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 512, 512);
+        
+        // Add subtle border
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(4, 4, 504, 504);
+        
+        // Set font and text
+        ctx.font = 'italic 280px Imperial Script, cursive';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Add text shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 4;
+        
+        // Draw "TK"
+        ctx.fillText('TK', 256, 256);
+        
+        // Download the image
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.download = 'tk_icon_512.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }, 1000);
+    </script>
+</body>
+</html>

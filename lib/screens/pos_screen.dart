@@ -301,9 +301,25 @@ class _POSScreenState extends State<POSScreen> {
         content: Text('Total: ₱${provider.cartTotal.toStringAsFixed(2)}'),
         actions: [
           TextButton(
-            onPressed: () {
-              provider.completeSale();
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await provider.completeSale();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sale completed successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error completing sale: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('OK'),
           ),

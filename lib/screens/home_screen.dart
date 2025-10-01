@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_provider.dart';
@@ -9,9 +10,7 @@ import 'reports_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String platform;
-  
-  const HomeScreen({super.key, required this.platform});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -36,11 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     _loadStoreInfo();
     
-    // Load sample data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppProvider>().setPlatform(widget.platform);
-      context.read<AppProvider>().loadSampleData();
-    });
+
   }
   
   Future<void> _loadStoreInfo() async {
@@ -49,6 +44,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _storeName = prefs.getString('store_name') ?? 'Tindahan Ko';
       _ownerName = prefs.getString('owner_name') ?? 'Store Owner';
     });
+  }
+  
+  void _refreshStoreInfo() {
+    _loadStoreInfo();
   }
 
   @override
@@ -62,40 +61,43 @@ class _HomeScreenState extends State<HomeScreen> {
             SafeArea(
               child: Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardBackground.withOpacity(0.3),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: AppTheme.cardBackground,
-                      width: 1,
-                    ),
-                  ),
-                ),
                 child: Column(
                   children: [
                     Text(
-                      _storeName,
-                      style: const TextStyle(
-                        fontSize: 24,
+                      'Tindahan Ko',
+                      style: GoogleFonts.getFont(
+                        'Imperial Script',
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
+                        fontStyle: FontStyle.italic,
                         color: Colors.white,
+                        shadows: [
+                          const Shadow(
+                            color: Colors.black26,
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    Text(
-                      'Owned by $_ownerName',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
                     const Text(
                       'Para sa mga Reyna ng Tahanan 👑',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white60,
+                        color: Colors.white70,
+                        fontStyle: FontStyle.italic,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _storeName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -104,7 +106,9 @@ class _HomeScreenState extends State<HomeScreen> {
             
             // Content
             Expanded(
-              child: _screens[_currentIndex],
+              child: _currentIndex == 3 
+                  ? SettingsScreen(onStoreInfoUpdated: _refreshStoreInfo)
+                  : _screens[_currentIndex],
             ),
           ],
         ),

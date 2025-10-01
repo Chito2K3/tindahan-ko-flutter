@@ -53,30 +53,16 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Tindahan',
-                          style: GoogleFonts.dancingScript(
+                          'Tindahan Ko',
+                          style: GoogleFonts.getFont(
+                            'Imperial Script',
                             fontSize: 48,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.3),
-                                offset: const Offset(2, 2),
-                                blurRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          'Ko',
-                          style: GoogleFonts.dancingScript(
-                            fontSize: 48,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.3),
-                                offset: const Offset(2, 2),
+                              const Shadow(
+                                color: Colors.black26,
+                                offset: Offset(2, 2),
                                 blurRadius: 4,
                               ),
                             ],
@@ -239,7 +225,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(platform: 'android'),
+            builder: (context) => const HomeScreen(),
           ),
         );
       }

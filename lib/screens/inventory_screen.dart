@@ -355,15 +355,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
             child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
           TextButton(
-            onPressed: () {
-              Provider.of<AppProvider>(context, listen: false).deleteProduct(product.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${product.name} deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              try {
+                await Provider.of<AppProvider>(context, listen: false).deleteProduct(product.id);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${product.name} deleted'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting product: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -815,7 +825,7 @@ class _ProductDialogState extends State<_ProductDialog> {
     );
   }
 
-  void _saveProduct() {
+  void _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
     final product = Product(
@@ -830,19 +840,28 @@ class _ProductDialogState extends State<_ProductDialog> {
       barcode: _hasBarcode ? _barcodeController.text : null,
     );
 
-    final provider = Provider.of<AppProvider>(context, listen: false);
-    if (widget.product == null) {
-      provider.addProduct(product);
-    } else {
-      provider.updateProduct(product);
-    }
+    try {
+      final provider = Provider.of<AppProvider>(context, listen: false);
+      if (widget.product == null) {
+        await provider.addProduct(product);
+      } else {
+        await provider.updateProduct(product);
+      }
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${product.name} ${widget.product == null ? 'added' : 'updated'}'),
-        backgroundColor: AppTheme.primaryPink,
-      ),
-    );
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product.name} ${widget.product == null ? 'added' : 'updated'}'),
+          backgroundColor: AppTheme.primaryPink,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving product: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

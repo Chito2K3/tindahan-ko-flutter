@@ -1,28 +1,45 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../services/database_service.dart';
 
 class AppProvider extends ChangeNotifier {
-  String _selectedPlatform = 'web';
   List<Product> _products = [];
   List<CartItem> _cart = [];
   Map<String, dynamic> _storeInfo = {};
+  bool _isLoading = false;
   
-  String get selectedPlatform => _selectedPlatform;
   List<Product> get products => _products;
   List<CartItem> get cart => _cart;
   Map<String, dynamic> get storeInfo => _storeInfo;
+  bool get isLoading => _isLoading;
   
   double get cartTotal => _cart.fold(0, (sum, item) => sum + (item.product.price * item.quantity));
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   
-  void setPlatform(String platform) {
-    _selectedPlatform = platform;
+
+  
+  Future<void> loadProducts() async {
+    _isLoading = true;
     notifyListeners();
+    
+    try {
+      _products = await DatabaseService.getAllProducts();
+      
+      // If no products exist, load sample data
+      if (_products.isEmpty) {
+        await _loadSampleData();
+      }
+    } catch (e) {
+      print('Error loading products: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
   
-  void loadSampleData() {
-    _products = [
+  Future<void> _loadSampleData() async {
+    final sampleProducts = [
       Product(
         id: 'p1',
         name: 'Skyflakes Crackers',
@@ -78,7 +95,12 @@ class AppProvider extends ChangeNotifier {
         barcode: '8850006330012',
       ),
     ];
-    notifyListeners();
+    
+    for (final product in sampleProducts) {
+      await DatabaseService.insertProduct(product);
+    }
+    
+    _products = sampleProducts;
   }
   
   Product? findProductByBarcode(String barcode) {
@@ -120,36 +142,60 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  void completeSale() {
-    // Update stock
-    for (final cartItem in _cart) {
-      final product = _products.firstWhere((p) => p.id == cartItem.product.id);
-      product.stock -= cartItem.quantity;
-    }
-    
-    // Clear cart
-    clearCart();
-    notifyListeners();
-  }
-  
-  void addProduct(Product product) {
-    _products.add(product);
-    notifyListeners();
-  }
-  
-  void updateProduct(Product updatedProduct) {
-    final index = _products.indexWhere((p) => p.id == updatedProduct.id);
-    if (index != -1) {
-      _products[index] = updatedProduct;
+  Future<void> completeSale() async {
+    try {
+      // Update stock in database and memory
+      for (final cartItem in _cart) {
+        final product = _products.firstWhere((p) => p.id == cartItem.product.id);
+        product.stock -= cartItem.quantity;
+        await DatabaseService.updateProduct(product);
+      }
+      
+      // Clear cart
+      clearCart();
       notifyListeners();
+    } catch (e) {
+      print('Error completing sale: $e');
+      rethrow;
     }
   }
   
-  void deleteProduct(String productId) {
-    _products.removeWhere((p) => p.id == productId);
-    // Also remove from cart if present
-    _cart.removeWhere((item) => item.product.id == productId);
-    notifyListeners();
+  Future<void> addProduct(Product product) async {
+    try {
+      await DatabaseService.insertProduct(product);
+      _products.add(product);
+      notifyListeners();
+    } catch (e) {
+      print('Error adding product: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> updateProduct(Product updatedProduct) async {
+    try {
+      await DatabaseService.updateProduct(updatedProduct);
+      final index = _products.indexWhere((p) => p.id == updatedProduct.id);
+      if (index != -1) {
+        _products[index] = updatedProduct;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error updating product: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> deleteProduct(String productId) async {
+    try {
+      await DatabaseService.deleteProduct(productId);
+      _products.removeWhere((p) => p.id == productId);
+      // Also remove from cart if present
+      _cart.removeWhere((item) => item.product.id == productId);
+      notifyListeners();
+    } catch (e) {
+      print('Error deleting product: $e');
+      rethrow;
+    }
   }
 }
 
