@@ -2,13 +2,16 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/product.dart';
+import '../models/sale.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'tindahan_ko.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 4;
 
   static const String _productsTable = 'products';
+  static const String _salesTable = 'sales';
+  static const String _saleItemsTable = 'sale_items';
 
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -40,7 +43,33 @@ class DatabaseService {
         barcode TEXT,
         isBatchSelling INTEGER DEFAULT 0,
         batchQuantity INTEGER,
-        batchPrice REAL
+        batchPrice REAL,
+        isCigarette INTEGER DEFAULT 0,
+        piecesPerPack INTEGER,
+        packPrice REAL,
+        loosePieces INTEGER DEFAULT 0,
+        fullPacks INTEGER DEFAULT 0,
+        autoOpenPack INTEGER DEFAULT 1
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE $_salesTable (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        total REAL NOT NULL
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE $_saleItemsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        saleId TEXT NOT NULL,
+        productId TEXT NOT NULL,
+        productName TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        price REAL NOT NULL,
+        FOREIGN KEY (saleId) REFERENCES $_salesTable (id)
       )
     ''');
   }
@@ -50,6 +79,36 @@ class DatabaseService {
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN isBatchSelling INTEGER DEFAULT 0');
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN batchQuantity INTEGER');
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN batchPrice REAL');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE $_salesTable (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          total REAL NOT NULL
+        )
+      ''');
+      
+      await db.execute('''
+        CREATE TABLE $_saleItemsTable (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          saleId TEXT NOT NULL,
+          productId TEXT NOT NULL,
+          productName TEXT NOT NULL,
+          quantity INTEGER NOT NULL,
+          price REAL NOT NULL,
+          FOREIGN KEY (saleId) REFERENCES $_salesTable (id)
+        )
+      ''');
+      
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN isCigarette INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN piecesPerPack INTEGER');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN packPrice REAL');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN loosePieces INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN fullPacks INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE $_productsTable ADD COLUMN autoOpenPack INTEGER DEFAULT 1');
     }
   }
 
@@ -117,6 +176,12 @@ class DatabaseService {
       'isBatchSelling': product.isBatchSelling ? 1 : 0,
       'batchQuantity': product.batchQuantity,
       'batchPrice': product.batchPrice,
+      'isCigarette': product.isCigarette ? 1 : 0,
+      'piecesPerPack': product.piecesPerPack,
+      'packPrice': product.packPrice,
+      'loosePieces': product.loosePieces,
+      'fullPacks': product.fullPacks,
+      'autoOpenPack': product.autoOpenPack ? 1 : 0,
     };
   }
 
@@ -134,6 +199,99 @@ class DatabaseService {
       isBatchSelling: map['isBatchSelling'] == 1,
       batchQuantity: map['batchQuantity'],
       batchPrice: map['batchPrice'],
+      isCigarette: (map['isCigarette'] ?? 0) == 1,
+      piecesPerPack: map['piecesPerPack'] ?? 20,
+      packPrice: map['packPrice'],
+      loosePieces: map['loosePieces'] ?? 0,
+      fullPacks: map['fullPacks'] ?? 0,
+      autoOpenPack: (map['autoOpenPack'] ?? 1) == 1,
     );
+  }
+
+  // Sales operations
+  static Future<void> insertSale(Sale sale) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert(_salesTable, {
+        'id': sale.id,
+        'date': sale.date.toIso8601String(),
+        'total': sale.total,
+      });
+      
+      for (final item in sale.items) {
+        await txn.insert(_saleItemsTable, {
+          'saleId': sale.id,
+          'productId': item.productId,
+          'productName': item.productName,
+          'quantity': item.quantity,
+          'price': item.price,
+        });
+      }
+    });
+  }
+
+  static Future<List<Sale>> getAllSales() async {
+    final db = await database;
+    final salesMaps = await db.query(_salesTable, orderBy: 'date DESC');
+    
+    List<Sale> sales = [];
+    for (final saleMap in salesMaps) {
+      final itemsMaps = await db.query(
+        _saleItemsTable,
+        where: 'saleId = ?',
+        whereArgs: [saleMap['id']],
+      );
+      
+      final items = itemsMaps.map((itemMap) => SaleItem(
+        productId: itemMap['productId'] as String,
+        productName: itemMap['productName'] as String,
+        quantity: itemMap['quantity'] as int,
+        price: itemMap['price'] as double,
+      )).toList();
+      
+      sales.add(Sale(
+        id: saleMap['id'] as String,
+        date: DateTime.parse(saleMap['date'] as String),
+        total: saleMap['total'] as double,
+        items: items,
+      ));
+    }
+    
+    return sales;
+  }
+
+  static Future<List<Sale>> getSalesInDateRange(DateTime start, DateTime end) async {
+    final db = await database;
+    final salesMaps = await db.query(
+      _salesTable,
+      where: 'date BETWEEN ? AND ?',
+      whereArgs: [start.toIso8601String(), end.toIso8601String()],
+      orderBy: 'date DESC',
+    );
+    
+    List<Sale> sales = [];
+    for (final saleMap in salesMaps) {
+      final itemsMaps = await db.query(
+        _saleItemsTable,
+        where: 'saleId = ?',
+        whereArgs: [saleMap['id']],
+      );
+      
+      final items = itemsMaps.map((itemMap) => SaleItem(
+        productId: itemMap['productId'] as String,
+        productName: itemMap['productName'] as String,
+        quantity: itemMap['quantity'] as int,
+        price: itemMap['price'] as double,
+      )).toList();
+      
+      sales.add(Sale(
+        id: saleMap['id'] as String,
+        date: DateTime.parse(saleMap['date'] as String),
+        total: saleMap['total'] as double,
+        items: items,
+      ));
+    }
+    
+    return sales;
   }
 }

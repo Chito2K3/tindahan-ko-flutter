@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/app_provider.dart';
 import '../models/product.dart';
+import '../models/sale.dart';
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -53,14 +54,18 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildSalesReport() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildSalesChart(),
-          const SizedBox(height: 20),
-          _buildTopSellingItems(),
-        ],
-      ),
+    return Consumer<AppProvider>(
+      builder: (context, provider, child) {
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildSalesChart(provider.sales),
+              const SizedBox(height: 20),
+              _buildTopSellingItems(provider.sales),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -80,7 +85,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildSalesChart() {
+  Widget _buildSalesChart(List<Sale> sales) {
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
@@ -98,7 +103,25 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: LineChart(
+            child: sales.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('📈', style: TextStyle(fontSize: 48)),
+                      SizedBox(height: 16),
+                      Text(
+                        'No sales data yet',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                      Text(
+                        'Complete some sales to see the chart',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                )
+              : LineChart(
               LineChartData(
                 gridData: FlGridData(show: false),
                 titlesData: FlTitlesData(
@@ -121,7 +144,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: _generateSampleSalesData(),
+                    spots: _generateSalesData(sales),
                     isCurved: true,
                     color: Colors.pink,
                     barWidth: 3,
@@ -133,15 +156,14 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                   ),
                 ],
               ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTopSellingItems() {
-    final topItems = _generateTopSellingItems();
+  Widget _buildTopSellingItems(List<Sale> sales) {
+    final topItems = _generateTopSellingItems(sales);
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -158,34 +180,52 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...topItems.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Text(item['emoji'], style: const TextStyle(fontSize: 24)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['name'],
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '${item['sold']} sold',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+          if (topItems.isEmpty)
+            const Center(
+              child: Column(
+                children: [
+                  Text('📊', style: TextStyle(fontSize: 32)),
+                  SizedBox(height: 8),
+                  Text(
+                    'No sales data yet',
+                    style: TextStyle(color: Colors.white70),
                   ),
-                ),
-                Text(
-                  '₱${NumberFormat('#,##0.00').format(item['revenue'])}',
-                  style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          )),
+                  Text(
+                    'Complete some sales to see top selling items',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...topItems.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Text(item['emoji'], style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['name'],
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${item['sold']} sold',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '₱${NumberFormat('#,##0.00').format(item['revenue'])}',
+                    style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            )),
         ],
       ),
     );
@@ -353,26 +393,67 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     );
   }
 
-  List<FlSpot> _generateSampleSalesData() {
-    return [
-      const FlSpot(0, 1200),
-      const FlSpot(1, 1800),
-      const FlSpot(2, 1500),
-      const FlSpot(3, 2200),
-      const FlSpot(4, 1900),
-      const FlSpot(5, 2500),
-      const FlSpot(6, 2100),
-    ];
+  List<FlSpot> _generateSalesData(List<Sale> sales) {
+    if (sales.isEmpty) {
+      return [const FlSpot(0, 0)];
+    }
+    
+    // Group sales by day for the last 7 days
+    final now = DateTime.now();
+    final last7Days = List.generate(7, (index) => now.subtract(Duration(days: 6 - index)));
+    
+    List<FlSpot> spots = [];
+    for (int i = 0; i < 7; i++) {
+      final day = last7Days[i];
+      final dayStart = DateTime(day.year, day.month, day.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      
+      final daySales = sales.where((sale) => 
+        sale.date.isAfter(dayStart) && sale.date.isBefore(dayEnd)
+      ).toList();
+      
+      final dayTotal = daySales.fold<double>(0, (sum, sale) => sum + sale.total);
+      spots.add(FlSpot(i.toDouble(), dayTotal));
+    }
+    
+    return spots;
   }
 
-  List<Map<String, dynamic>> _generateTopSellingItems() {
-    return [
-      {'name': 'Rice 5kg', 'emoji': '🍚', 'sold': 45, 'revenue': 11250.0},
-      {'name': 'Instant Noodles', 'emoji': '🍜', 'sold': 38, 'revenue': 570.0},
-      {'name': 'Cooking Oil', 'emoji': '🫒', 'sold': 25, 'revenue': 3750.0},
-      {'name': 'Canned Goods', 'emoji': '🥫', 'sold': 22, 'revenue': 1100.0},
-      {'name': 'Soft Drinks', 'emoji': '🥤', 'sold': 18, 'revenue': 720.0},
-    ];
+  List<Map<String, dynamic>> _generateTopSellingItems(List<Sale> sales, List<Product> products) {
+    if (sales.isEmpty) {
+      return [];
+    }
+    
+    // Create a map for quick product lookup
+    final productMap = {for (var p in products) p.id: p};
+    
+    // Aggregate sales by product
+    Map<String, Map<String, dynamic>> productSales = {};
+    
+    for (final sale in sales) {
+      for (final item in sale.items) {
+        final product = productMap[item.productId];
+        final emoji = product?.emoji ?? '📦';
+        
+        if (productSales.containsKey(item.productId)) {
+          productSales[item.productId]!['sold'] += item.quantity;
+          productSales[item.productId]!['revenue'] += item.total;
+        } else {
+          productSales[item.productId] = {
+            'name': item.productName,
+            'emoji': emoji,
+            'sold': item.quantity,
+            'revenue': item.total,
+          };
+        }
+      }
+    }
+    
+    // Sort by revenue and take top 5
+    final sortedItems = productSales.values.toList()
+      ..sort((a, b) => (b['revenue'] as double).compareTo(a['revenue'] as double));
+    
+    return sortedItems.take(5).toList();
   }
 
   int _getUniqueCategories(List<Product> products) {

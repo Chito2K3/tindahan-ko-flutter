@@ -661,107 +661,117 @@ class _POSScreenState extends State<POSScreen> {
     );
     
     try {
-      // Simulate processing time
-      await Future.delayed(const Duration(seconds: 2));
-      
+      // Store total amount before clearing cart
       double totalAmount = provider.cartTotal;
+      
+      // Complete the sale
       await provider.completeSale();
       
-      Navigator.pop(context); // Close processing dialog
+      // Close processing dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
       
       // Show success dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 32),
-              SizedBox(width: 12),
-              Text('Payment Successful!', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 16),
-              Text(
-                'Total: ${AppTheme.formatCurrency(totalAmount)}',
-                style: const TextStyle(color: AppTheme.primaryPink, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Payment: ${AppTheme.formatCurrency(paymentAmount)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              if (change > 0) ...[
-                const SizedBox(height: 4),
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 32),
+                SizedBox(width: 12),
+                Text('Payment Successful!', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🎉', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: 16),
                 Text(
-                  'Change: ${AppTheme.formatCurrency(change)}',
-                  style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                  'Total: ${AppTheme.formatCurrency(totalAmount)}',
+                  style: const TextStyle(color: AppTheme.primaryPink, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Payment: ${AppTheme.formatCurrency(paymentAmount)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                if (change > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Change: ${AppTheme.formatCurrency(change)}',
+                    style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                const Text(
+                  'Transaction completed successfully!',
+                  style: TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Date: ${DateTime.now().toString().split('.')[0]}',
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
-              const SizedBox(height: 12),
-              const Text(
-                'Transaction completed successfully!',
-                style: TextStyle(color: Colors.white70),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Date: ${DateTime.now().toString().split('.')[0]}',
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sale completed successfully! 🎉'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPink,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Continue'),
               ),
             ],
           ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sale completed successfully! 🎉'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPink,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
+        );
+      }
     } catch (e) {
-      Navigator.pop(context); // Close processing dialog
+      // Close processing dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
       
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Row(
-            children: [
-              Icon(Icons.error, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Payment Failed', style: TextStyle(color: Colors.white)),
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Payment Failed', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+            content: Text(
+              'Error: $e\n\nPlease try again.',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+              ),
             ],
           ),
-          content: Text(
-            'Error: $e\n\nPlease try again.',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
-            ),
-          ],
-        ),
-      );
+        );
+      }
     }
   }
 }

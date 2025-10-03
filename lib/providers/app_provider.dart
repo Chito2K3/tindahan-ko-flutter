@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../models/sale.dart';
 import '../services/database_service.dart';
 
 class AppProvider extends ChangeNotifier {
   List<Product> _products = [];
   List<CartItem> _cart = [];
+  List<CigaretteCartItem> _cigaretteCart = [];
   Map<String, dynamic> _storeInfo = {};
   bool _isLoading = false;
+  List<Sale> _sales = [];
   
   List<Product> get products => _products;
   List<CartItem> get cart => _cart;
+  List<CigaretteCartItem> get cigaretteCart => _cigaretteCart;
   Map<String, dynamic> get storeInfo => _storeInfo;
   bool get isLoading => _isLoading;
+  List<Sale> get sales => _sales;
   
-  double get cartTotal => _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode));
+  double get cartTotal => 
+    _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)) +
+    _cigaretteCart.fold(0, (sum, item) => sum + item.totalPrice);
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   
@@ -25,6 +32,7 @@ class AppProvider extends ChangeNotifier {
     
     try {
       _products = await DatabaseService.getAllProducts();
+      _sales = await DatabaseService.getAllSales();
       
       // If no products exist, load sample data
       if (_products.isEmpty) {
@@ -120,6 +128,9 @@ class AppProvider extends ChangeNotifier {
         isCigarette: true,
         piecesPerPack: 20,
         packPrice: 130.00,
+        loosePieces: 0,
+        fullPacks: 10,
+        autoOpenPack: true,
       ),
     ];
     
@@ -135,18 +146,76 @@ class AppProvider extends ChangeNotifier {
   }
   
   void addToCart(Product product) {
+    if (product.isCigarette) {
+      addCigaretteToCart(product, CigaretteUnit.piece, 1);
+      return;
+    }
+    
     final existingIndex = _cart.indexWhere((item) => item.product.id == product.id);
     
     if (existingIndex >= 0) {
-      final increment = product.isBatchSelling ? product.batchQuantity! : 
-                       (product.isCigarette && _cart[existingIndex].isPackMode ? product.piecesPerPack! : 1);
+      final increment = product.isBatchSelling ? product.batchQuantity! : 1;
       if (_cart[existingIndex].quantity + increment <= product.stock) {
         _cart[existingIndex].quantity += increment;
       }
     } else {
       final initialQuantity = product.isBatchSelling ? product.batchQuantity! : 1;
-      final isPackMode = product.isCigarette && product.piecesPerPack != null;
-      _cart.add(CartItem(product: product, quantity: initialQuantity, isPackMode: isPackMode));
+      _cart.add(CartItem(product: product, quantity: initialQuantity, isPackMode: false));
+    }
+    notifyListeners();
+  }
+  
+  void addCigaretteToCart(Product product, CigaretteUnit unit, int quantity) {
+    if (!product.isCigarette) return;
+    
+    final existingIndex = _cigaretteCart.indexWhere((item) => item.product.id == product.id);
+    
+    if (existingIndex >= 0) {
+      if (unit == CigaretteUnit.pack) {
+        if (product.canSellPacks(_cigaretteCart[existingIndex].packQuantity + quantity)) {
+          _cigaretteCart[existingIndex].packQuantity += quantity;
+        }
+      } else {
+        if (product.canSellPieces(_cigaretteCart[existingIndex].pieceQuantity + quantity)) {
+          _cigaretteCart[existingIndex].pieceQuantity += quantity;
+        }
+      }
+    } else {
+      final item = CigaretteCartItem(product: product);
+      if (unit == CigaretteUnit.pack && product.canSellPacks(quantity)) {
+        item.packQuantity = quantity;
+      } else if (unit == CigaretteUnit.piece && product.canSellPieces(quantity)) {
+        item.pieceQuantity = quantity;
+      }
+      if (!item.isEmpty) {
+        _cigaretteCart.add(item);
+      }
+    }
+    notifyListeners();
+  }
+  
+  void updateCigaretteQuantity(int index, CigaretteUnit unit, int change) {
+    if (index >= _cigaretteCart.length) return;
+    
+    final item = _cigaretteCart[index];
+    if (unit == CigaretteUnit.pack) {
+      final newQuantity = item.packQuantity + change;
+      if (newQuantity <= 0) {
+        item.packQuantity = 0;
+      } else if (item.product.canSellPacks(newQuantity)) {
+        item.packQuantity = newQuantity;
+      }
+    } else {
+      final newQuantity = item.pieceQuantity + change;
+      if (newQuantity <= 0) {
+        item.pieceQuantity = 0;
+      } else if (item.product.canSellPieces(newQuantity)) {
+        item.pieceQuantity = newQuantity;
+      }
+    }
+    
+    if (item.isEmpty) {
+      _cigaretteCart.removeAt(index);
     }
     notifyListeners();
   }
@@ -183,6 +252,7 @@ class AppProvider extends ChangeNotifier {
   
   void clearCart() {
     _cart.clear();
+    _cigaretteCart.clear();
     notifyListeners();
   }
   
@@ -203,12 +273,69 @@ class AppProvider extends ChangeNotifier {
   
   Future<void> completeSale() async {
     try {
+      // Create sale record
+      final saleId = 'sale_${DateTime.now().millisecondsSinceEpoch}';
+      final saleItems = <SaleItem>[];
+      
+      // Add regular cart items
+      saleItems.addAll(_cart.map((cartItem) => SaleItem(
+        productId: cartItem.product.id,
+        productName: cartItem.product.name,
+        quantity: cartItem.quantity,
+        price: cartItem.product.getPriceForQuantity(1, isPackMode: cartItem.isPackMode),
+      )));
+      
+      // Add cigarette cart items
+      for (final cigItem in _cigaretteCart) {
+        if (cigItem.packQuantity > 0) {
+          saleItems.add(SaleItem(
+            productId: cigItem.product.id,
+            productName: '${cigItem.product.name} (Pack)',
+            quantity: cigItem.packQuantity,
+            price: cigItem.product.packPrice ?? 0,
+          ));
+        }
+        if (cigItem.pieceQuantity > 0) {
+          saleItems.add(SaleItem(
+            productId: cigItem.product.id,
+            productName: '${cigItem.product.name} (Piece)',
+            quantity: cigItem.pieceQuantity,
+            price: cigItem.product.price,
+          ));
+        }
+      }
+      
+      final sale = Sale(
+        id: saleId,
+        date: DateTime.now(),
+        total: cartTotal,
+        items: saleItems,
+      );
+      
+      // Save sale to database
+      await DatabaseService.insertSale(sale);
+      
       // Update stock in database and memory
       for (final cartItem in _cart) {
         final product = _products.firstWhere((p) => p.id == cartItem.product.id);
         product.stock -= cartItem.quantity;
         await DatabaseService.updateProduct(product);
       }
+      
+      // Update cigarette stock
+      for (final cigItem in _cigaretteCart) {
+        final product = _products.firstWhere((p) => p.id == cigItem.product.id);
+        if (cigItem.packQuantity > 0) {
+          product.sellPacks(cigItem.packQuantity);
+        }
+        if (cigItem.pieceQuantity > 0) {
+          product.sellPieces(cigItem.pieceQuantity);
+        }
+        await DatabaseService.updateProduct(product);
+      }
+      
+      // Reload sales data
+      _sales = await DatabaseService.getAllSales();
       
       // Clear cart
       clearCart();
