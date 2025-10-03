@@ -2,14 +2,14 @@
 
 A complete POS and Inventory Management System for Sari-Sari stores, built with Flutter for native Android, iOS, and Web experience.
 
-## Latest Version: v1.2.0 🎉
+## Latest Version: v1.4.0 🎉
 
 ### ✨ New Features
-- **📊 Reports Dashboard** - Sales and inventory analytics with interactive charts
-- **📁 Excel Export/Import** - Backup and restore data via Excel files
-- **🎨 Custom TK Icons** - Professional branding with Imperial Script font
-- **💾 SQLite Database** - Persistent data storage across app sessions
-- **⚙️ Complete Settings** - Store information, backup/restore, and about sections
+- **🚬 Dual-Unit Cigarette System** - Separate pack/piece inventory with smart deduction
+- **💰 Independent Pricing** - Different prices for packs and loose pieces
+- **🔧 Payment Processing Fix** - Resolved hanging "Processing payment..." dialog
+- **📊 Real Sales Data** - Actual transaction tracking in reports and analytics
+- **🗄️ Database v4** - Enhanced schema with cigarette support and auto-migration
 
 ## Core Features
 
@@ -27,6 +27,8 @@ A complete POS and Inventory Management System for Sari-Sari stores, built with 
 - Payment processing with confirmation
 - Barcode scanning integration
 - Sales data persistence
+- **Cigarette selection dialog**: Choose between pack or piece when adding cigarettes
+- **Dual cart controls**: Separate +/- buttons for packs and pieces
 
 ### 📦 Inventory Management
 - Product listing with stock levels
@@ -34,6 +36,8 @@ A complete POS and Inventory Management System for Sari-Sari stores, built with 
 - Statistics dashboard
 - Category-based organization
 - SQLite database persistence
+- **Cigarette dual-unit system**: Track packs and loose pieces separately
+- **Smart inventory deduction**: Auto-opens packs when loose pieces run out
 
 ### 📊 Reports & Analytics
 - **Sales Report**: Daily/weekly sales charts, top-selling items
@@ -141,26 +145,38 @@ When exporting/importing data, the Excel file contains these columns:
 
 ## 📈 Version History
 
-### v1.2.0 (Latest) - Excel & Reports Update
-- ✅ Reports dashboard with sales/inventory analytics
-- ✅ Excel export/import functionality
-- ✅ Interactive charts and graphs
-- ✅ Enhanced backup & restore features
+### v1.4.0 (Latest) - Cigarette System & Payment Fix
+- ✅ Dual-unit cigarette inventory (packs + pieces)
+- ✅ Separate pricing for packs and loose cigarettes
+- ✅ Smart inventory deduction with auto-pack opening
+- ✅ Enhanced POS with cigarette selection dialog
+- ✅ Fixed payment processing hang issue
+- ✅ Real sales data integration in reports
+- ✅ Database v4 with automatic migration
 
-### v1.1.3 - Custom Icons Update
+### v1.3.1 - TK Icons Fixed
 - ✅ Custom TK app icons with Imperial Script font
 - ✅ Professional branding across all platforms
 - ✅ Updated web manifest and favicons
 
-### v1.1.2 - Settings Complete
-- ✅ Functional store information management
-- ✅ Professional about dialog
-- ✅ Enhanced UI with Imperial Script font
+### v1.3.0 - Batch Payment
+- ✅ Enhanced batch selling functionality
+- ✅ Improved payment processing
+- ✅ Better inventory management
 
-### v1.1.1 - Database Integration
-- ✅ SQLite database implementation
-- ✅ Persistent data storage
-- ✅ Enhanced inventory management
+### v1.2.2 - Final Fixed
+- ✅ Bug fixes and performance improvements
+- ✅ Stable release with all features
+
+### v1.2.1 - Keyboard Fixed
+- ✅ Fixed keyboard input issues
+- ✅ Improved user experience
+
+### v1.2.0 - Excel & Reports Update
+- ✅ Reports dashboard with sales/inventory analytics
+- ✅ Excel export/import functionality
+- ✅ Interactive charts and graphs
+- ✅ Enhanced backup & restore features
 
 ### v1.0.0 - Initial Release
 - ✅ Basic POS functionality

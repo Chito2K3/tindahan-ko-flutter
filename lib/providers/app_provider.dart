@@ -19,8 +19,8 @@ class AppProvider extends ChangeNotifier {
   List<Sale> get sales => _sales;
   
   double get cartTotal => 
-    _cart.fold(0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)) +
-    _cigaretteCart.fold(0, (sum, item) => sum + item.totalPrice);
+    _cart.fold(0.0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)) +
+    _cigaretteCart.fold(0.0, (sum, item) => sum + item.totalPrice);
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   

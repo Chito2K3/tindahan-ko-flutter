@@ -607,7 +607,7 @@ class _AboutDialog extends StatelessWidget {
                       const Icon(Icons.verified, color: Colors.green, size: 16),
                       const SizedBox(width: 6),
                       const Text(
-                        'Version 1.0.0',
+                        'Version 1.4.0',
                         style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
                     ],
@@ -694,7 +694,8 @@ class _AboutDialog extends StatelessWidget {
             const Text('📱 Native barcode scanning', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const Text('💰 Point of Sale system', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const Text('📦 Inventory management', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('📊 Sales tracking', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            const Text('🚬 Dual-unit cigarette system', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            const Text('📊 Real sales tracking & reports', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const Text('💾 Data backup & restore', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const SizedBox(height: 16),
             Center(

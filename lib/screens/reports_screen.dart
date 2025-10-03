@@ -122,7 +122,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                   ),
                 )
               : LineChart(
-              LineChartData(
+                LineChartData(
                 gridData: FlGridData(show: false),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -155,6 +155,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                     ),
                   ),
                 ],
+                ),
               ),
           ),
         ],
@@ -163,7 +164,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildTopSellingItems(List<Sale> sales) {
-    final topItems = _generateTopSellingItems(sales);
+    final topItems = _generateTopSellingItems(sales, context.read<AppProvider>().products);
     
     return Container(
       padding: const EdgeInsets.all(20),
