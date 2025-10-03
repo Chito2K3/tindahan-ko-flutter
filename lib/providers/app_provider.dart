@@ -157,11 +157,12 @@ class AppProvider extends ChangeNotifier {
         // Add to existing cigarette cart item with same mode
         final existingItem = _cart[existingIndex];
         if (isPackMode) {
-          if (product.canSellPacks(existingItem.quantity + 1)) {
+          if (existingItem.quantity + 1 <= product.fullPacks) {
             existingItem.quantity += 1;
           }
         } else {
-          if (product.canSellPieces(existingItem.quantity + 1)) {
+          final totalAvailable = product.loosePieces + (product.fullPacks * 20);
+          if (existingItem.quantity + 1 <= totalAvailable) {
             existingItem.quantity += 1;
           }
         }
@@ -224,14 +225,25 @@ class AppProvider extends ChangeNotifier {
       }
       
       if (item.isPackMode) {
-        if (item.product.canSellPacks(newQuantity)) {
+        // Check pack stock
+        final availablePacks = item.product.fullPacks;
+        if (newQuantity > availablePacks) {
+          message = 'We can only sell $availablePacks of ${item.product.name}.';
+        } else {
           item.quantity = newQuantity;
         }
       } else {
+        // Check piece stock and 19 limit
         if (newQuantity > 19) {
           message = '20 pieces = 1 pack. Switch to Pack Mode for more.';
-        } else if (item.product.canSellPieces(newQuantity)) {
-          item.quantity = newQuantity;
+        } else {
+          final availablePieces = item.product.loosePieces;
+          final totalAvailable = availablePieces + (item.product.fullPacks * 20);
+          if (newQuantity > totalAvailable) {
+            message = 'We can only sell $totalAvailable pieces of ${item.product.name}.';
+          } else {
+            item.quantity = newQuantity;
+          }
         }
       }
     } else {

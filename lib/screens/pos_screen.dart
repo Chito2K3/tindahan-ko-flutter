@@ -541,6 +541,7 @@ class _POSScreenState extends State<POSScreen> {
 
   void _processPayment(BuildContext context, AppProvider provider) {
     final TextEditingController paymentController = TextEditingController();
+    final FocusNode paymentFocusNode = FocusNode();
     final theme = Theme.of(context);
     double totalAmount = provider.cartTotal;
     
@@ -627,7 +628,9 @@ class _POSScreenState extends State<POSScreen> {
                     ),
                     child: TextField(
                       controller: paymentController,
-                      keyboardType: TextInputType.number,
+                      focusNode: paymentFocusNode,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      autofocus: true,
                       style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Enter payment amount',
@@ -639,6 +642,9 @@ class _POSScreenState extends State<POSScreen> {
                       ),
                       onChanged: (value) {
                         setState(() {});
+                      },
+                      onTap: () {
+                        paymentFocusNode.requestFocus();
                       },
                     ),
                   ),
