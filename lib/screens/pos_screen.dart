@@ -56,17 +56,21 @@ class _POSScreenState extends State<POSScreen> {
   }
   
   void _selectProduct(Product product) {
-    final provider = Provider.of<AppProvider>(context, listen: false);
-    provider.addToCart(product);
-    _searchController.clear();
-    _searchFocusNode.unfocus();
-    setState(() {
-      _showSearchResults = false;
-      _searchResults = [];
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${product.name} added to cart!')),
-    );
+    if (product.isCigarette) {
+      _showCigaretteSelectionDialog(product);
+    } else {
+      final provider = Provider.of<AppProvider>(context, listen: false);
+      provider.addToCart(product);
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      setState(() {
+        _showSearchResults = false;
+        _searchResults = [];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${product.name} added to cart!')),
+      );
+    }
   }
 
   @override
@@ -398,6 +402,103 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
+  void _showCigaretteSelectionDialog(Product product) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        title: Row(
+          children: [
+            Text(product.emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                product.name,
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Choose how to add to cart:',
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _addCigaretteToCart(product, CigaretteUnit.piece);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.scatter_plot, size: 16),
+                    label: Column(
+                      children: [
+                        const Text('Piece', style: TextStyle(fontSize: 12)),
+                        Text('₱${product.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _addCigaretteToCart(product, CigaretteUnit.pack);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.inventory_2, size: 16),
+                    label: Column(
+                      children: [
+                        const Text('Pack', style: TextStyle(fontSize: 12)),
+                        Text('₱${(product.packPrice ?? 0).toStringAsFixed(2)}', style: const TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addCigaretteToCart(Product product, CigaretteUnit unit) {
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    final isPackMode = unit == CigaretteUnit.pack;
+    provider.addToCart(product, isPackMode: isPackMode);
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {
+      _showSearchResults = false;
+      _searchResults = [];
+    });
+    final unitText = unit == CigaretteUnit.piece ? 'piece' : 'pack';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${product.name} ($unitText) added to cart!')),
+    );
+  }
+
   void _scanBarcode(BuildContext context, AppProvider provider) async {
     final hasPermission = await BarcodeService.requestCameraPermission();
     if (!hasPermission) {
@@ -412,10 +513,14 @@ class _POSScreenState extends State<POSScreen> {
       onBarcodeDetected: (barcode) {
         final product = provider.findProductByBarcode(barcode);
         if (product != null) {
-          provider.addToCart(product);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${product.name} added to cart!')),
-          );
+          if (product.isCigarette) {
+            _showCigaretteSelectionDialog(product);
+          } else {
+            provider.addToCart(product);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${product.name} added to cart!')),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Product not found: $barcode')),

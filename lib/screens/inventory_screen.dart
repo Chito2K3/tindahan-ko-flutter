@@ -485,6 +485,27 @@ class _ProductCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (product.isCigarette) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'CIGARETTE',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                       if (product.hasBarcode) ...[
                         const SizedBox(width: 8),
                         Icon(
@@ -502,12 +523,12 @@ class _ProductCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${product.stock}',
+                  product.isCigarette ? product.stockDisplay : '${product.stock}',
                   style: TextStyle(
                     color: product.isLowStock 
                         ? Colors.red
                         : theme.colorScheme.onSurface,
-                    fontSize: 20,
+                    fontSize: product.isCigarette ? 14 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -642,14 +663,17 @@ class _ProductDialogState extends State<_ProductDialog> {
   late TextEditingController _reorderController;
   late TextEditingController _batchQuantityController;
   late TextEditingController _batchPriceController;
+  late TextEditingController _packPriceController;
+  late TextEditingController _piecePriceController;
   
   String _selectedCategory = 'snacks';
   String _selectedEmoji = '📦';
   bool _hasBarcode = false;
   bool _isBatchSelling = false;
+  bool _isCigarette = false;
   
-  final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food', 'candies'];
-  final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫', '🍬'];
+  final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food', 'candies', 'cigarettes'];
+  final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫', '🍬', '🚬'];
 
   @override
   void initState() {
@@ -661,12 +685,15 @@ class _ProductDialogState extends State<_ProductDialog> {
     _reorderController = TextEditingController(text: widget.product?.reorderLevel.toString() ?? '5');
     _batchQuantityController = TextEditingController(text: widget.product?.batchQuantity?.toString() ?? '');
     _batchPriceController = TextEditingController(text: widget.product?.batchPrice?.toString() ?? '');
+    _packPriceController = TextEditingController(text: widget.product?.packPrice?.toString() ?? '');
+    _piecePriceController = TextEditingController(text: widget.product?.price.toString() ?? '');
     
     if (widget.product != null) {
       _selectedCategory = widget.product!.category;
       _selectedEmoji = widget.product!.emoji;
       _hasBarcode = widget.product!.hasBarcode;
       _isBatchSelling = widget.product!.isBatchSelling;
+      _isCigarette = widget.product!.isCigarette;
     } else if (widget.barcode != null) {
       _hasBarcode = true;
     }
@@ -682,6 +709,8 @@ class _ProductDialogState extends State<_ProductDialog> {
     _reorderController.dispose();
     _batchQuantityController.dispose();
     _batchPriceController.dispose();
+    _packPriceController.dispose();
+    _piecePriceController.dispose();
     super.dispose();
   }
 
@@ -745,7 +774,7 @@ class _ProductDialogState extends State<_ProductDialog> {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            if (!_isBatchSelling)
+                            if (!_isBatchSelling && !_isCigarette)
                               Expanded(
                                 child: TextFormField(
                                   controller: _priceController,
@@ -759,13 +788,13 @@ class _ProductDialogState extends State<_ProductDialog> {
                                     ),
                                   ),
                                   validator: (value) {
-                                    if (!_isBatchSelling && value?.isEmpty == true) return 'Required';
-                                    if (!_isBatchSelling && double.tryParse(value!) == null) return 'Invalid number';
+                                    if (!_isBatchSelling && !_isCigarette && value?.isEmpty == true) return 'Required';
+                                    if (!_isBatchSelling && !_isCigarette && double.tryParse(value!) == null) return 'Invalid number';
                                     return null;
                                   },
                                 ),
                               ),
-                            if (!_isBatchSelling) const SizedBox(width: 16),
+                            if (!_isBatchSelling && !_isCigarette) const SizedBox(width: 16),
                             Expanded(
                               child: TextFormField(
                                 controller: _stockController,
@@ -806,7 +835,10 @@ class _ProductDialogState extends State<_ProductDialog> {
                                   value: category,
                                   child: Text(category),
                                 )).toList(),
-                                onChanged: (value) => setState(() => _selectedCategory = value!),
+                                onChanged: (value) => setState(() {
+                                  _selectedCategory = value!;
+                                  _isCigarette = value == 'cigarettes';
+                                }),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -920,6 +952,66 @@ class _ProductDialogState extends State<_ProductDialog> {
                             style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
                           ),
                         ],
+                        if (_isCigarette) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            'Cigarette Settings',
+                            style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _piecePriceController,
+                                  style: TextStyle(color: theme.colorScheme.onSurface),
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Piece Price (₱)',
+                                    labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                    ),
+                                    hintText: 'e.g. 6.50',
+                                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                                  ),
+                                  validator: (value) {
+                                    if (_isCigarette && (value?.isEmpty == true)) return 'Required';
+                                    if (_isCigarette && double.tryParse(value!) == null) return 'Invalid number';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _packPriceController,
+                                  style: TextStyle(color: theme.colorScheme.onSurface),
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Pack Price (₱)',
+                                    labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                    ),
+                                    hintText: 'e.g. 130.00',
+                                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                                  ),
+                                  validator: (value) {
+                                    if (_isCigarette && (value?.isEmpty == true)) return 'Required';
+                                    if (_isCigarette && double.tryParse(value!) == null) return 'Invalid number';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Note: Stock represents total pieces. Piece Price is per individual cigarette, Pack Price is per pack (20 pieces).',
+                            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -957,7 +1049,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     final product = Product(
       id: widget.product?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text,
-      price: _isBatchSelling ? 0.0 : double.parse(_priceController.text),
+      price: _isCigarette 
+          ? double.parse(_piecePriceController.text)
+          : (_isBatchSelling ? 0.0 : double.parse(_priceController.text)),
       stock: int.parse(_stockController.text),
       category: _selectedCategory,
       emoji: _selectedEmoji,
@@ -967,6 +1061,12 @@ class _ProductDialogState extends State<_ProductDialog> {
       isBatchSelling: _isBatchSelling,
       batchQuantity: _isBatchSelling ? int.parse(_batchQuantityController.text) : null,
       batchPrice: _isBatchSelling ? double.parse(_batchPriceController.text) : null,
+      isCigarette: _isCigarette,
+      piecesPerPack: _isCigarette ? 20 : null,
+      packPrice: _isCigarette ? double.parse(_packPriceController.text) : null,
+      loosePieces: _isCigarette ? int.parse(_stockController.text) % 20 : 0,
+      fullPacks: _isCigarette ? int.parse(_stockController.text) ~/ 20 : 0,
+      autoOpenPack: _isCigarette ? true : false,
     );
 
     try {
