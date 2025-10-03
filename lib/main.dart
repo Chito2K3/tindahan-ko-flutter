@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/store_setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'providers/app_provider.dart';
-import 'utils/theme.dart';
+import 'providers/theme_provider.dart';
 
 void main() {
   runApp(const TindahanKoApp());
@@ -18,16 +18,23 @@ class TindahanKoApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Tindahan Ko',
-        theme: AppTheme.theme,
-        home: const InitialScreen(),
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) {
-          return GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: child,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Tindahan Ko',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const InitialScreen(),
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: child,
+              );
+            },
           );
         },
       ),

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_provider.dart';
-import '../utils/theme.dart';
+import '../providers/theme_provider.dart';
 import 'pos_screen.dart';
 import 'inventory_screen.dart';
 import 'reports_screen.dart';
@@ -52,108 +52,162 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
-        child: Column(
-          children: [
-            // Header
-            SafeArea(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      'Tindahan Ko',
-                      style: GoogleFonts.getFont(
-                        'Imperial Script',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white,
-                        shadows: [
-                          const Shadow(
-                            color: Colors.black26,
-                            offset: Offset(1, 1),
-                            blurRadius: 2,
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          resizeToAvoidBottomInset: true,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: themeProvider.isDarkMode
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF0F1724),
+                        Color(0xFF111827),
+                        Color(0xFF1F2937),
+                      ],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFFFFFFF),
+                        Color(0xFFF6F7FB),
+                        Color(0xFFE5E7EB),
+                      ],
                     ),
-                    const Text(
-                      'Para sa mga Reyna ng Tahanan 👑',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                        fontStyle: FontStyle.italic,
-                      ),
+            ),
+            child: Column(
+              children: [
+                // Header
+                SafeArea(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Spacer(),
+                            Column(
+                              children: [
+                                Text(
+                                  'Tindahan Ko',
+                                  style: GoogleFonts.getFont(
+                                    'Imperial Script',
+                                    fontSize: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  'Para sa mga Reyna ng Tindahan',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    fontStyle: FontStyle.italic,
+                                    fontFamily: 'Inter',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  _storeName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            // Theme toggle button
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                ),
+                              ),
+                              child: IconButton(
+                                onPressed: () => themeProvider.toggleTheme(),
+                                icon: Icon(
+                                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                tooltip: themeProvider.isDarkMode ? 'Light Mode' : 'Dark Mode',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _storeName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
+                ),
+                
+                // Content
+                Expanded(
+                  child: _currentIndex == 3 
+                      ? SettingsScreen(onStoreInfoUpdated: _refreshStoreInfo)
+                      : _screens[_currentIndex],
+                ),
+              ],
+            ),
+          ),
+          
+          // Bottom Navigation
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  width: 1,
                 ),
               ),
             ),
-            
-            // Content
-            Expanded(
-              child: _currentIndex == 3 
-                  ? SettingsScreen(onStoreInfoUpdated: _refreshStoreInfo)
-                  : _screens[_currentIndex],
-            ),
-          ],
-        ),
-      ),
-      
-      // Bottom Navigation
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground.withOpacity(0.3),
-          border: Border(
-            top: BorderSide(
-              color: AppTheme.cardBackground,
-              width: 1,
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
+              unselectedItemColor: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
+              elevation: 0,
+              selectedLabelStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Text('💰', style: TextStyle(fontSize: 24)),
+                  label: 'Benta',
+                ),
+                BottomNavigationBarItem(
+                  icon: Text('📦', style: TextStyle(fontSize: 24)),
+                  label: 'Tindahan',
+                ),
+                BottomNavigationBarItem(
+                  icon: Text('📊', style: TextStyle(fontSize: 24)),
+                  label: 'Ulat',
+                ),
+                BottomNavigationBarItem(
+                  icon: Text('⚙️', style: TextStyle(fontSize: 24)),
+                  label: 'Ayos',
+                ),
+              ],
             ),
           ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          selectedItemColor: AppTheme.primaryPink,
-          unselectedItemColor: AppTheme.textSecondary,
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Text('💰', style: TextStyle(fontSize: 24)),
-              label: 'Benta',
-            ),
-            BottomNavigationBarItem(
-              icon: Text('📦', style: TextStyle(fontSize: 24)),
-              label: 'Tindahan',
-            ),
-            BottomNavigationBarItem(
-              icon: Text('📊', style: TextStyle(fontSize: 24)),
-              label: 'Ulat',
-            ),
-            BottomNavigationBarItem(
-              icon: Text('⚙️', style: TextStyle(fontSize: 24)),
-              label: 'Ayos',
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

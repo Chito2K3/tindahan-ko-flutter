@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/product.dart';
 import '../services/barcode_service.dart';
-import '../utils/theme.dart';
 
 class POSScreen extends StatefulWidget {
   const POSScreen({super.key});
@@ -71,8 +71,9 @@ class _POSScreenState extends State<POSScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<AppProvider, ThemeProvider>(
+      builder: (context, provider, themeProvider, child) {
+        final theme = Theme.of(context);
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -86,21 +87,21 @@ class _POSScreenState extends State<POSScreen> {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: theme.colorScheme.surface.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                           ),
                           child: TextField(
                             controller: _searchController,
                             focusNode: _searchFocusNode,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: theme.colorScheme.onSurface),
                             decoration: InputDecoration(
                               hintText: 'Search products...',
-                              hintStyle: const TextStyle(color: Colors.white70),
-                              prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear, color: Colors.white70),
+                                      icon: Icon(Icons.clear, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                                       onPressed: () {
                                         _searchController.clear();
                                         setState(() {
@@ -119,7 +120,7 @@ class _POSScreenState extends State<POSScreen> {
                       const SizedBox(width: 12),
                       Container(
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryPink,
+                          color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -134,21 +135,21 @@ class _POSScreenState extends State<POSScreen> {
                     Container(
                       margin: const EdgeInsets.only(top: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: theme.colorScheme.surface.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                       ),
                       constraints: const BoxConstraints(maxHeight: 200),
                       child: _searchResults.isEmpty
                           ? Container(
                               padding: const EdgeInsets.all(16),
-                              child: const Row(
+                              child: Row(
                                 children: [
-                                  Icon(Icons.search_off, color: Colors.white70),
-                                  SizedBox(width: 12),
+                                  Icon(Icons.search_off, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  const SizedBox(width: 12),
                                   Text(
                                     'Item doesn\'t exist',
-                                    style: TextStyle(color: Colors.white70),
+                                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                                   ),
                                 ],
                               ),
@@ -165,16 +166,16 @@ class _POSScreenState extends State<POSScreen> {
                                   ),
                                   title: Text(
                                     product.name,
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
                                   ),
                                   subtitle: Text(
                                     product.displayPrice,
-                                    style: const TextStyle(color: AppTheme.primaryPink, fontSize: 12),
+                                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
                                   ),
                                   trailing: Text(
                                     'Stock: ${product.stock}',
                                     style: TextStyle(
-                                      color: product.isLowStock ? Colors.red : Colors.white70,
+                                      color: product.isLowStock ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -191,9 +192,9 @@ class _POSScreenState extends State<POSScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: theme.colorScheme.surface.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
                   ),
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -202,20 +203,20 @@ class _POSScreenState extends State<POSScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Cart',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           if (provider.cart.isNotEmpty)
                             TextButton(
                               onPressed: provider.clearCart,
-                              child: const Text(
+                              child: Text(
                                 'Clear',
-                                style: TextStyle(color: Colors.white70),
+                                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                               ),
                             ),
                         ],
@@ -225,23 +226,23 @@ class _POSScreenState extends State<POSScreen> {
                       // Cart Items
                       Expanded(
                         child: provider.cart.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text('🛒', style: TextStyle(fontSize: 48)),
-                                  SizedBox(height: 16),
+                                  const Text('🛒', style: TextStyle(fontSize: 48)),
+                                  const SizedBox(height: 16),
                                   Text(
                                     'Cart is empty',
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 16,
                                     ),
                                   ),
                                   Text(
                                     'Scan or search for products',
                                     style: TextStyle(
-                                      color: Colors.white54,
+                                      color: theme.colorScheme.onSurface.withOpacity(0.54),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -256,7 +257,7 @@ class _POSScreenState extends State<POSScreen> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: theme.colorScheme.surface.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -272,23 +273,23 @@ class _POSScreenState extends State<POSScreen> {
                                           children: [
                                             Text(
                                               item.product.name,
-                                              style: const TextStyle(
-                                                color: Colors.white,
+                                              style: TextStyle(
+                                                color: theme.colorScheme.onSurface,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                             Text(
-                                              AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)),
-                                              style: const TextStyle(
-                                                color: Colors.white70,
+                                              '₱${item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode).toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                color: theme.colorScheme.onSurface.withOpacity(0.7),
                                                 fontSize: 12,
                                               ),
                                             ),
                                             if (item.product.isBatchSelling)
                                               Text(
-                                                'Batch: ${item.product.batchQuantity}pcs = ${AppTheme.formatCurrency(item.product.batchPrice!)}',
-                                                style: const TextStyle(
-                                                  color: AppTheme.primaryPink,
+                                                'Batch: ${item.product.batchQuantity}pcs = ₱${item.product.batchPrice!.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.primary,
                                                   fontSize: 10,
                                                 ),
                                               ),
@@ -298,14 +299,14 @@ class _POSScreenState extends State<POSScreen> {
                                                 child: Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                   decoration: BoxDecoration(
-                                                    color: AppTheme.primaryPink.withOpacity(0.2),
+                                                    color: theme.colorScheme.primary.withOpacity(0.2),
                                                     borderRadius: BorderRadius.circular(4),
-                                                    border: Border.all(color: AppTheme.primaryPink, width: 0.5),
+                                                    border: Border.all(color: theme.colorScheme.primary, width: 0.5),
                                                   ),
                                                   child: Text(
                                                     item.isPackMode ? 'Pack Mode' : 'Piece Mode',
-                                                    style: const TextStyle(
-                                                      color: AppTheme.primaryPink,
+                                                    style: TextStyle(
+                                                      color: theme.colorScheme.primary,
                                                       fontSize: 9,
                                                       fontWeight: FontWeight.bold,
                                                     ),
@@ -324,8 +325,8 @@ class _POSScreenState extends State<POSScreen> {
                                           const SizedBox(width: 8),
                                           Text(
                                             '${item.quantity}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: theme.colorScheme.onSurface,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -345,24 +346,24 @@ class _POSScreenState extends State<POSScreen> {
                       
                       // Total and Checkout
                       if (provider.cart.isNotEmpty) ...[
-                        const Divider(color: Colors.white30),
+                        Divider(color: theme.colorScheme.outline.withOpacity(0.3)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total:',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                             Text(
-                              AppTheme.formatCurrency(provider.cartTotal),
-                              style: const TextStyle(
+                              '₱${provider.cartTotal.toStringAsFixed(2)}',
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryPink,
+                                color: theme.colorScheme.primary,
                               ),
                             ),
                           ],
@@ -373,7 +374,7 @@ class _POSScreenState extends State<POSScreen> {
                           child: ElevatedButton(
                             onPressed: () => _processPayment(context, provider),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryPink,
+                              backgroundColor: theme.colorScheme.primary,
                               padding: const EdgeInsets.all(16),
                             ),
                             child: const Text(
@@ -426,6 +427,7 @@ class _POSScreenState extends State<POSScreen> {
 
   void _processPayment(BuildContext context, AppProvider provider) {
     final TextEditingController paymentController = TextEditingController();
+    final theme = Theme.of(context);
     double totalAmount = provider.cartTotal;
     
     showDialog(
@@ -438,12 +440,12 @@ class _POSScreenState extends State<POSScreen> {
           bool isValidPayment = paymentAmount >= totalAmount;
           
           return AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Row(
+            backgroundColor: theme.colorScheme.surface,
+            title: Row(
               children: [
-                Icon(Icons.payment, color: AppTheme.primaryPink),
-                SizedBox(width: 8),
-                Text('Process Payment', style: TextStyle(color: Colors.white)),
+                Icon(Icons.payment, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Process Payment', style: TextStyle(color: theme.colorScheme.onSurface)),
               ],
             ),
             content: SingleChildScrollView(
@@ -453,7 +455,7 @@ class _POSScreenState extends State<POSScreen> {
                 children: [
                   Text(
                     'Order Summary:',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -468,12 +470,12 @@ class _POSScreenState extends State<POSScreen> {
                               Expanded(
                                 child: Text(
                                   '${item.product.emoji} ${item.product.name} x${item.quantity}',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                                 ),
                               ),
                               Text(
-                                AppTheme.formatCurrency(item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode)),
-                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                '₱${item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode).toStringAsFixed(2)}',
+                                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                               ),
                             ],
                           ),
@@ -481,41 +483,41 @@ class _POSScreenState extends State<POSScreen> {
                       ),
                     ),
                   ),
-                  const Divider(color: Colors.white30),
+                  Divider(color: theme.colorScheme.outline.withOpacity(0.3)),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Total Amount:',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
-                        AppTheme.formatCurrency(totalAmount),
-                        style: const TextStyle(color: AppTheme.primaryPink, fontWeight: FontWeight.bold, fontSize: 18),
+                        '₱${totalAmount.toStringAsFixed(2)}',
+                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Payment Amount:',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: theme.colorScheme.surface.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                     ),
                     child: TextField(
                       controller: paymentController,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Enter payment amount',
-                        hintStyle: const TextStyle(color: Colors.white54),
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54)),
                         prefixText: '₱',
-                        prefixStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                        prefixStyle: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(12),
                       ),
@@ -538,12 +540,12 @@ class _POSScreenState extends State<POSScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Change:',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                AppTheme.formatCurrency(change),
+                                '₱${change.toStringAsFixed(2)}',
                                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                             ],
@@ -592,7 +594,7 @@ class _POSScreenState extends State<POSScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Need ${AppTheme.formatCurrency(totalAmount - paymentAmount)} more',
+                              'Need ₱${(totalAmount - paymentAmount).toStringAsFixed(2)} more',
                               style: const TextStyle(color: Colors.red),
                             ),
                           ],
@@ -606,7 +608,7 @@ class _POSScreenState extends State<POSScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
               ),
               ElevatedButton(
                 onPressed: isValidPayment && paymentAmount > 0 
@@ -614,7 +616,7 @@ class _POSScreenState extends State<POSScreen> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isValidPayment && paymentAmount > 0 
-                      ? AppTheme.primaryPink 
+                      ? theme.colorScheme.primary 
                       : Colors.grey,
                   foregroundColor: Colors.white,
                 ),
@@ -638,6 +640,7 @@ class _POSScreenState extends State<POSScreen> {
   }
   
   void _confirmPayment(BuildContext context, AppProvider provider, double paymentAmount, double change) async {
+    final theme = Theme.of(context);
     Navigator.pop(context); // Close confirmation dialog
     
     // Show processing dialog
@@ -645,15 +648,15 @@ class _POSScreenState extends State<POSScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: theme.colorScheme.surface,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppTheme.primaryPink),
+            CircularProgressIndicator(color: theme.colorScheme.primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Processing payment...',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: theme.colorScheme.onSurface),
             ),
           ],
         ),
@@ -678,12 +681,12 @@ class _POSScreenState extends State<POSScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Row(
+            backgroundColor: theme.colorScheme.surface,
+            title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 32),
-                SizedBox(width: 12),
-                Text('Payment Successful!', style: TextStyle(color: Colors.white)),
+                const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                const SizedBox(width: 12),
+                Text('Payment Successful!', style: TextStyle(color: theme.colorScheme.onSurface)),
               ],
             ),
             content: Column(
@@ -692,31 +695,31 @@ class _POSScreenState extends State<POSScreen> {
                 const Text('🎉', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 16),
                 Text(
-                  'Total: ${AppTheme.formatCurrency(totalAmount)}',
-                  style: const TextStyle(color: AppTheme.primaryPink, fontSize: 18, fontWeight: FontWeight.bold),
+                  'Total: ₱${totalAmount.toStringAsFixed(2)}',
+                  style: TextStyle(color: theme.colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Payment: ${AppTheme.formatCurrency(paymentAmount)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  'Payment: ₱${paymentAmount.toStringAsFixed(2)}',
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
                 ),
                 if (change > 0) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Change: ${AppTheme.formatCurrency(change)}',
+                    'Change: ₱${change.toStringAsFixed(2)}',
                     style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Transaction completed successfully!',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Date: ${DateTime.now().toString().split('.')[0]}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
                 ),
               ],
             ),
@@ -732,7 +735,7 @@ class _POSScreenState extends State<POSScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPink,
+                  backgroundColor: theme.colorScheme.primary,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Continue'),
@@ -751,22 +754,22 @@ class _POSScreenState extends State<POSScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Row(
+            backgroundColor: theme.colorScheme.surface,
+            title: Row(
               children: [
-                Icon(Icons.error, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Payment Failed', style: TextStyle(color: Colors.white)),
+                const Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('Payment Failed', style: TextStyle(color: theme.colorScheme.onSurface)),
               ],
             ),
             content: Text(
               'Error: $e\n\nPlease try again.',
-              style: const TextStyle(color: Colors.white70),
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+                child: Text('OK', style: TextStyle(color: theme.colorScheme.primary)),
               ),
             ],
           ),
@@ -775,8 +778,6 @@ class _POSScreenState extends State<POSScreen> {
     }
   }
 }
-
-
 
 class _QuantityButton extends StatelessWidget {
   final IconData icon;
@@ -790,7 +791,7 @@ class _QuantityButton extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: AppTheme.primaryPink,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       child: IconButton(

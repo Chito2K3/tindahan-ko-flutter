@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/product.dart';
 import '../services/barcode_service.dart';
-import '../utils/theme.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -33,8 +33,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<AppProvider, ThemeProvider>(
+      builder: (context, provider, themeProvider, child) {
+        final theme = Theme.of(context);
         final filteredProducts = _getFilteredProducts(provider.products);
         
         return Scaffold(
@@ -73,19 +74,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: theme.colorScheme.surface.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
                         ),
                         child: TextField(
                           controller: _searchController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
+                          style: TextStyle(color: theme.colorScheme.onSurface),
+                          decoration: InputDecoration(
                             hintText: 'Search products...',
-                            hintStyle: TextStyle(color: Colors.white60),
-                            prefixIcon: Icon(Icons.search, color: Colors.white60),
+                            hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                            prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           onChanged: (value) {
                             setState(() {
@@ -98,13 +99,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     const SizedBox(width: 12),
                     Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryPink.withOpacity(0.2),
+                        color: theme.colorScheme.primary.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryPink.withOpacity(0.3)),
+                        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
                       ),
                       child: IconButton(
                         onPressed: () => _showBarcodeScanner(context),
-                        icon: const Icon(Icons.qr_code_scanner, color: AppTheme.primaryPink),
+                        icon: Icon(Icons.qr_code_scanner, color: theme.colorScheme.primary),
                         tooltip: 'Scan Barcode',
                       ),
                     ),
@@ -118,10 +119,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   children: [
                     Text(
                       'Products (${filteredProducts.length})',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     if (_searchQuery.isNotEmpty)
@@ -132,9 +133,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             _searchQuery = '';
                           });
                         },
-                        child: const Text(
+                        child: Text(
                           'Clear',
-                          style: TextStyle(color: AppTheme.primaryPink),
+                          style: TextStyle(color: theme.colorScheme.primary),
                         ),
                       ),
                   ],
@@ -155,8 +156,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 _searchQuery.isEmpty ? 'No products yet' : 'No products found',
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                                   fontSize: 18,
                                 ),
                               ),
@@ -165,8 +166,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 _searchQuery.isEmpty 
                                     ? 'Add your first product using the + button'
                                     : 'Try a different search term',
-                                style: const TextStyle(
-                                  color: Colors.white60,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                                   fontSize: 14,
                                 ),
                               ),
@@ -190,7 +191,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _addProduct(context),
-            backgroundColor: AppTheme.primaryPink,
+            backgroundColor: theme.colorScheme.primary,
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text(
               'Add Item',
@@ -215,14 +216,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _handleScannedBarcode(BuildContext context, String barcode) {
     final provider = Provider.of<AppProvider>(context, listen: false);
     final product = provider.findProductByBarcode(barcode);
+    final theme = Theme.of(context);
     
     if (product != null) {
       // Product found - show details
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Text('Product Found!', style: TextStyle(color: Colors.white)),
+          backgroundColor: theme.colorScheme.surface,
+          title: Text('Product Found!', style: TextStyle(color: theme.colorScheme.onSurface)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,16 +239,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       children: [
                         Text(
                           product.name,
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           '₱${product.price.toStringAsFixed(2)}',
-                          style: const TextStyle(color: AppTheme.primaryPink, fontSize: 16),
+                          style: TextStyle(color: theme.colorScheme.primary, fontSize: 16),
                         ),
                         Text(
                           'Stock: ${product.stock}',
                           style: TextStyle(
-                            color: product.isLowStock ? Colors.red : Colors.white70,
+                            color: product.isLowStock ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 14,
                           ),
                         ),
@@ -258,21 +260,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const SizedBox(height: 16),
               Text(
                 'Barcode: $barcode',
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close', style: TextStyle(color: Colors.white70)),
+              child: Text('Close', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _editProduct(context, product);
               },
-              child: const Text('Edit', style: TextStyle(color: AppTheme.primaryPink)),
+              child: Text('Edit', style: TextStyle(color: theme.colorScheme.primary)),
             ),
           ],
         ),
@@ -282,8 +284,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Text('Product Not Found', style: TextStyle(color: Colors.white)),
+          backgroundColor: theme.colorScheme.surface,
+          title: Text('Product Not Found', style: TextStyle(color: theme.colorScheme.onSurface)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -291,26 +293,26 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const SizedBox(height: 16),
               Text(
                 'No product found with barcode:',
-                style: const TextStyle(color: Colors.white70),
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
               ),
               const SizedBox(height: 8),
               Text(
                 barcode,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _addProductWithBarcode(context, barcode);
               },
-              child: const Text('Add Product', style: TextStyle(color: AppTheme.primaryPink)),
+              child: Text('Add Product', style: TextStyle(color: theme.colorScheme.primary)),
             ),
           ],
         ),
@@ -340,19 +342,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _deleteProduct(BuildContext context, Product product) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Delete Product', style: TextStyle(color: Colors.white)),
+        backgroundColor: theme.colorScheme.surface,
+        title: Text('Delete Product', style: TextStyle(color: theme.colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${product.name}"?',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
           ),
           TextButton(
             onPressed: () async {
@@ -396,17 +399,18 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: product.isLowStock 
             ? Colors.red.withOpacity(0.1)
-            : Colors.white.withOpacity(0.1),
+            : theme.colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: product.isLowStock 
               ? Colors.red.withOpacity(0.5)
-              : Colors.white.withOpacity(0.2),
+              : theme.colorScheme.outline.withOpacity(0.2),
           width: product.isLowStock ? 2 : 1,
         ),
       ),
@@ -425,8 +429,8 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -434,8 +438,8 @@ class _ProductCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     product.displayPrice,
-                    style: const TextStyle(
-                      color: AppTheme.primaryPink,
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -449,13 +453,13 @@ class _ProductCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: theme.colorScheme.surface.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           product.category,
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 12,
                           ),
                         ),
@@ -468,13 +472,13 @@ class _ProductCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryPink.withOpacity(0.2),
+                            color: theme.colorScheme.primary.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
+                          child: Text(
                             'BATCH',
                             style: TextStyle(
-                              color: AppTheme.primaryPink,
+                              color: theme.colorScheme.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -483,9 +487,9 @@ class _ProductCard extends StatelessWidget {
                       ],
                       if (product.hasBarcode) ...[
                         const SizedBox(width: 8),
-                        const Icon(
+                        Icon(
                           Icons.qr_code,
-                          color: Colors.white70,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                           size: 16,
                         ),
                       ],
@@ -502,15 +506,15 @@ class _ProductCard extends StatelessWidget {
                   style: TextStyle(
                     color: product.isLowStock 
                         ? Colors.red
-                        : Colors.white,
+                        : theme.colorScheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
+                Text(
                   'Stock',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -542,7 +546,7 @@ class _ProductCard extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onEdit,
-                  icon: const Icon(Icons.edit, color: AppTheme.primaryPink, size: 20),
+                  icon: Icon(Icons.edit, color: theme.colorScheme.primary, size: 20),
                   tooltip: 'Edit',
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
@@ -576,15 +580,16 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: theme.colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isWarning 
             ? Colors.orange.withOpacity(0.5)
-            : Colors.white.withOpacity(0.2),
+            : theme.colorScheme.outline.withOpacity(0.2),
         ),
       ),
       child: Column(
@@ -599,14 +604,14 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: isWarning ? Colors.orange : Colors.white,
+              color: isWarning ? Colors.orange : theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -642,18 +647,6 @@ class _ProductDialogState extends State<_ProductDialog> {
   String _selectedEmoji = '📦';
   bool _hasBarcode = false;
   bool _isBatchSelling = false;
-  
-  void _ensureVisible() {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
   
   final List<String> _categories = ['snacks', 'drinks', 'household', 'personal', 'food', 'candies'];
   final List<String> _emojis = ['📦', '🍪', '🥤', '🍜', '🧽', '🦷', '🍞', '🥛', '🧴', '🍫', '🍬'];
@@ -694,8 +687,9 @@ class _ProductDialogState extends State<_ProductDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Dialog(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
@@ -705,7 +699,7 @@ class _ProductDialogState extends State<_ProductDialog> {
           children: [
             Text(
               widget.product == null ? 'Add Product' : 'Edit Product',
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -719,213 +713,213 @@ class _ProductDialogState extends State<_ProductDialog> {
                     padding: const EdgeInsets.only(right: 8),
                     child: Column(
                       children: [
-                Row(
-                  children: [
-                    DropdownButton<String>(
-                      value: _selectedEmoji,
-                      dropdownColor: Colors.grey[800],
-                      style: const TextStyle(fontSize: 24),
-                      items: _emojis.map((emoji) => DropdownMenuItem(
-                        value: emoji,
-                        child: Text(emoji),
-                      )).toList(),
-                      onChanged: (value) => setState(() => _selectedEmoji = value!),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _nameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Product Name',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
+                        Row(
+                          children: [
+                            DropdownButton<String>(
+                              value: _selectedEmoji,
+                              dropdownColor: theme.colorScheme.surface,
+                              style: const TextStyle(fontSize: 24),
+                              items: _emojis.map((emoji) => DropdownMenuItem(
+                                value: emoji,
+                                child: Text(emoji),
+                              )).toList(),
+                              onChanged: (value) => setState(() => _selectedEmoji = value!),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _nameController,
+                                style: TextStyle(color: theme.colorScheme.onSurface),
+                                decoration: InputDecoration(
+                                  labelText: 'Product Name',
+                                  labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                  ),
+                                ),
+                                validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                              ),
+                            ),
+                          ],
                         ),
-                        validator: (value) => value?.isEmpty == true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    if (!_isBatchSelling)
-                      Expanded(
-                        child: TextFormField(
-                          controller: _priceController,
-                          style: const TextStyle(color: Colors.white),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Price (₱)',
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white30),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            if (!_isBatchSelling)
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _priceController,
+                                  style: TextStyle(color: theme.colorScheme.onSurface),
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Price (₱)',
+                                    labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (!_isBatchSelling && value?.isEmpty == true) return 'Required';
+                                    if (!_isBatchSelling && double.tryParse(value!) == null) return 'Invalid number';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            if (!_isBatchSelling) const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _stockController,
+                                style: TextStyle(color: theme.colorScheme.onSurface),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: 'Stock',
+                                  labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value?.isEmpty == true) return 'Required';
+                                  if (int.tryParse(value!) == null) return 'Invalid number';
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedCategory,
+                                dropdownColor: theme.colorScheme.surface,
+                                style: TextStyle(color: theme.colorScheme.onSurface),
+                                decoration: InputDecoration(
+                                  labelText: 'Category',
+                                  labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                  ),
+                                ),
+                                items: _categories.map((category) => DropdownMenuItem(
+                                  value: category,
+                                  child: Text(category),
+                                )).toList(),
+                                onChanged: (value) => setState(() => _selectedCategory = value!),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _reorderController,
+                                style: TextStyle(color: theme.colorScheme.onSurface),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: 'Reorder Level',
+                                  labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value?.isEmpty == true) return 'Required';
+                                  if (int.tryParse(value!) == null) return 'Invalid number';
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _hasBarcode,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (value) => setState(() => _hasBarcode = value!),
+                            ),
+                            Text('Has Barcode', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                          ],
+                        ),
+                        if (_hasBarcode)
+                          TextFormField(
+                            controller: _barcodeController,
+                            style: TextStyle(color: theme.colorScheme.onSurface),
+                            decoration: InputDecoration(
+                              labelText: 'Barcode',
+                              labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                              ),
                             ),
                           ),
-                          validator: (value) {
-                            if (!_isBatchSelling && value?.isEmpty == true) return 'Required';
-                            if (!_isBatchSelling && double.tryParse(value!) == null) return 'Invalid number';
-                            return null;
-                          },
-                        ),
-                      ),
-                    if (!_isBatchSelling) const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stockController,
-                        style: const TextStyle(color: Colors.white),
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Stock',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
-                          if (int.tryParse(value!) == null) return 'Invalid number';
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        dropdownColor: Colors.grey[800],
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                        ),
-                        items: _categories.map((category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        )).toList(),
-                        onChanged: (value) => setState(() => _selectedCategory = value!),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _reorderController,
-                        style: const TextStyle(color: Colors.white),
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Reorder Level',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value?.isEmpty == true) return 'Required';
-                          if (int.tryParse(value!) == null) return 'Invalid number';
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _hasBarcode,
-                      activeColor: AppTheme.primaryPink,
-                      onChanged: (value) => setState(() => _hasBarcode = value!),
-                    ),
-                    const Text('Has Barcode', style: TextStyle(color: Colors.white70)),
-                  ],
-                ),
-                if (_hasBarcode)
-                  TextFormField(
-                    controller: _barcodeController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Barcode',
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white30),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _isBatchSelling,
-                      activeColor: AppTheme.primaryPink,
-                      onChanged: (value) => setState(() => _isBatchSelling = value!),
-                    ),
-                    const Text('Batch Selling', style: TextStyle(color: Colors.white70)),
-                  ],
-                ),
-                if (_isBatchSelling) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _batchQuantityController,
-                          style: const TextStyle(color: Colors.white),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Batch Quantity',
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white30),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _isBatchSelling,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (value) => setState(() => _isBatchSelling = value!),
                             ),
-                            hintText: 'e.g. 3',
-                            hintStyle: TextStyle(color: Colors.white30),
-                          ),
-                          validator: (value) {
-                            if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
-                            if (_isBatchSelling && int.tryParse(value!) == null) return 'Invalid';
-                            return null;
-                          },
+                            Text('Batch Selling', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _batchPriceController,
-                          style: const TextStyle(color: Colors.white),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Batch Price (₱)',
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white30),
-                            ),
-                            hintText: 'e.g. 5.00',
-                            hintStyle: TextStyle(color: Colors.white30),
+                        if (_isBatchSelling) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _batchQuantityController,
+                                  style: TextStyle(color: theme.colorScheme.onSurface),
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Batch Quantity',
+                                    labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                    ),
+                                    hintText: 'e.g. 3',
+                                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                                  ),
+                                  validator: (value) {
+                                    if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
+                                    if (_isBatchSelling && int.tryParse(value!) == null) return 'Invalid';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _batchPriceController,
+                                  style: TextStyle(color: theme.colorScheme.onSurface),
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Batch Price (₱)',
+                                    labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+                                    ),
+                                    hintText: 'e.g. 5.00',
+                                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                                  ),
+                                  validator: (value) {
+                                    if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
+                                    if (_isBatchSelling && double.tryParse(value!) == null) return 'Invalid';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                          validator: (value) {
-                            if (_isBatchSelling && (value?.isEmpty == true)) return 'Required';
-                            if (_isBatchSelling && double.tryParse(value!) == null) return 'Invalid';
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Example: 3 pieces for ₱5.00',
-                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
-                  ),
-                ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Example: 3 pieces for ₱5.00',
+                            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -938,13 +932,13 @@ class _ProductDialogState extends State<_ProductDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                  child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: _saveProduct,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPink,
+                    backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
                   ),
                   child: Text(widget.product == null ? 'Add' : 'Save'),
@@ -987,7 +981,7 @@ class _ProductDialogState extends State<_ProductDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${product.name} ${widget.product == null ? 'added' : 'updated'}'),
-          backgroundColor: AppTheme.primaryPink,
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
     } catch (e) {

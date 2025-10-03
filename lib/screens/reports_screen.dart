@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/product.dart';
 import '../models/sale.dart';
 import 'package:intl/intl.dart';
@@ -30,9 +31,9 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         children: [
           TabBar(
             controller: _tabController,
-            indicatorColor: Colors.pink,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.onSurface,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             tabs: const [
               Tab(text: 'Sales Report'),
               Tab(text: 'Inventory Report'),
@@ -54,8 +55,9 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildSalesReport() {
-    return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<AppProvider, ThemeProvider>(
+      builder: (context, provider, themeProvider, child) {
+        final theme = Theme.of(context);
         return SingleChildScrollView(
           child: Column(
             children: [
@@ -70,8 +72,9 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildInventoryReport() {
-    return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<AppProvider, ThemeProvider>(
+      builder: (context, provider, themeProvider, child) {
+        final theme = Theme.of(context);
         return SingleChildScrollView(
           child: Column(
             children: [
@@ -86,311 +89,336 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildSalesChart(List<Sale> sales) {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Daily Sales (Last 7 Days)',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
           ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: sales.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('📈', style: TextStyle(fontSize: 48)),
-                      SizedBox(height: 16),
-                      Text(
-                        'No sales data yet',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Daily Sales (Last 7 Days)',
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: sales.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('📈', style: TextStyle(fontSize: 48)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No sales data yet',
+                            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 16),
+                          ),
+                          Text(
+                            'Complete some sales to see the chart',
+                            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Text(
-                        'Complete some sales to see the chart',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                    )
+                  : LineChart(
+                    LineChartData(
+                    gridData: FlGridData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                            return Text(
+                              days[value.toInt() % 7],
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: _generateSalesData(sales),
+                        isCurved: true,
+                        color: theme.colorScheme.primary,
+                        barWidth: 3,
+                        dotData: FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                        ),
                       ),
                     ],
-                  ),
-                )
-              : LineChart(
-                LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                        return Text(
-                          days[value.toInt() % 7],
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        );
-                      },
                     ),
                   ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: _generateSalesData(sales),
-                    isCurved: true,
-                    color: Colors.pink,
-                    barWidth: 3,
-                    dotData: FlDotData(show: true),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: Colors.pink.withOpacity(0.3),
-                    ),
-                  ),
-                ],
-                ),
               ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
   Widget _buildTopSellingItems(List<Sale> sales) {
-    final topItems = _generateTopSellingItems(sales, context.read<AppProvider>().products);
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Top Selling Items',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final topItems = _generateTopSellingItems(sales, context.read<AppProvider>().products);
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
           ),
-          const SizedBox(height: 16),
-          if (topItems.isEmpty)
-            const Center(
-              child: Column(
-                children: [
-                  Text('📊', style: TextStyle(fontSize: 32)),
-                  SizedBox(height: 8),
-                  Text(
-                    'No sales data yet',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  Text(
-                    'Complete some sales to see top selling items',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Top Selling Items',
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            )
-          else
-            ...topItems.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Text(item['emoji'], style: const TextStyle(fontSize: 24)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['name'],
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '${item['sold']} sold',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 16),
+              if (topItems.isEmpty)
+                Center(
+                  child: Column(
+                    children: [
+                      const Text('📊', style: TextStyle(fontSize: 32)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No sales data yet',
+                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                      ),
+                      Text(
+                        'Complete some sales to see top selling items',
+                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 12),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '₱${NumberFormat('#,##0.00').format(item['revenue'])}',
-                    style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold),
+                )
+              else
+                ...topItems.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Text(item['emoji'], style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['name'],
+                              style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${item['sold']} sold',
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '₱${NumberFormat('#,##0.00').format(item['revenue'])}',
+                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
-        ],
-      ),
+                )),
+            ],
+          ),
+        );
+      }
     );
   }
 
   Widget _buildInventoryStats(List<Product> products) {
-    final totalProducts = products.length;
-    final totalValue = products.fold<double>(0, (sum, p) => sum + (p.price * p.stock));
-    final lowStockCount = products.where((p) => p.stock <= p.reorderLevel).length;
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Inventory Overview',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final totalProducts = products.length;
+        final totalValue = products.fold<double>(0, (sum, p) => sum + (p.price * p.stock));
+        final lowStockCount = products.where((p) => p.stock <= p.reorderLevel).length;
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
           ),
-          const SizedBox(height: 20),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildStatCard('Total Products', totalProducts.toString(), '📦'),
+              Text(
+                'Inventory Overview',
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('Total Value', '₱${NumberFormat('#,##0').format(totalValue)}', '💰'),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard('Total Products', totalProducts.toString(), '📦'),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard('Total Value', '₱${NumberFormat('#,##0').format(totalValue)}', '💰'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard('Low Stock', lowStockCount.toString(), '⚠️'),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard('Categories', _getUniqueCategories(products).toString(), '🏷️'),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard('Low Stock', lowStockCount.toString(), '⚠️'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('Categories', _getUniqueCategories(products).toString(), '🏷️'),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      }
     );
   }
 
   Widget _buildStatCard(String title, String value, String emoji) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
           ),
-          Text(
-            title,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-            textAlign: TextAlign.center,
+          child: Column(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 24)),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                title,
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
   Widget _buildLowStockAlerts(List<Product> products) {
-    final lowStockProducts = products.where((p) => p.stock <= p.reorderLevel).toList();
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Low Stock Alerts',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${lowStockProducts.length}',
-                  style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final lowStockProducts = products.where((p) => p.stock <= p.reorderLevel).toList();
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
           ),
-          const SizedBox(height: 16),
-          if (lowStockProducts.isEmpty)
-            const Center(
-              child: Column(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text('✅', style: TextStyle(fontSize: 32)),
-                  SizedBox(height: 8),
                   Text(
-                    'All products are well stocked!',
-                    style: TextStyle(color: Colors.white70),
+                    'Low Stock Alerts',
+                    style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ],
-              ),
-            )
-          else
-            ...lowStockProducts.map((product) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Text(product.emoji, style: const TextStyle(fontSize: 24)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Stock: ${product.stock} (Reorder at: ${product.reorderLevel})',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'LOW',
-                      style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                    child: Text(
+                      '${lowStockProducts.length}',
+                      style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
-            )),
-        ],
-      ),
+              const SizedBox(height: 16),
+              if (lowStockProducts.isEmpty)
+                Center(
+                  child: Column(
+                    children: [
+                      const Text('✅', style: TextStyle(fontSize: 32)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'All products are well stocked!',
+                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...lowStockProducts.map((product) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Text(product.emoji, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.name,
+                              style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Stock: ${product.stock} (Reorder at: ${product.reorderLevel})',
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'LOW',
+                          style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+            ],
+          ),
+        );
+      }
     );
   }
 

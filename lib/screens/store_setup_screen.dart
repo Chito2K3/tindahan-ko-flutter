@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import 'home_screen.dart';
 
 class StoreSetupScreen extends StatefulWidget {
@@ -20,36 +21,41 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final theme = Theme.of(context);
+        return Scaffold(
+          resizeToAvoidBottomInset: true,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFFFF),
+                  Color(0xFFF6F7FB),
+                  Color(0xFFE5E7EB),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
                   
                   // Header with stylized logo
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppTheme.primaryPink, AppTheme.primaryPink.withOpacity(0.8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: theme.colorScheme.surface.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryPink.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
                     ),
                     child: Column(
                       children: [
@@ -58,7 +64,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                           style: GoogleFonts.getFont(
                             'Imperial Script',
                             fontSize: 48,
-                            color: Colors.white,
+                            color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             shadows: [
                               const Shadow(
@@ -68,20 +74,18 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                               ),
                             ],
                           ),
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Para sa mga Reyna ng Tahanan',
-                          style: GoogleFonts.poppins(
+                          'Para sa mga Reyna ng Tindahan',
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             fontStyle: FontStyle.italic,
+                            fontFamily: 'Inter',
                           ),
                           textAlign: TextAlign.center,
-                        ),
-                        Text(
-                          '👑',
-                          style: const TextStyle(fontSize: 20),
                         ),
                       ],
                     ),
@@ -92,7 +96,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     'Setup Your Store',
                     style: GoogleFonts.poppins(
                       fontSize: 24,
-                      color: Colors.white,
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -101,7 +105,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     'Enter your store information to get started',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: Colors.white70,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -150,15 +154,15 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveStoreInfo,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.primaryPink,
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 4,
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator(color: AppTheme.primaryPink)
+                          ? CircularProgressIndicator(color: theme.colorScheme.primary)
                           : Text(
                               'Start Selling! 🚀',
                               style: GoogleFonts.poppins(
@@ -168,12 +172,14 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                             ),
                     ),
                   ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -186,19 +192,30 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.inputBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(icon, color: AppTheme.textSecondary),
-          labelStyle: TextStyle(color: AppTheme.textSecondary),
-          hintStyle: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7)),
+          prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
+          labelStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
+          hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
         ),

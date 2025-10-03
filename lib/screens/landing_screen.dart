@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../utils/theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import 'home_screen.dart';
 
 class LandingScreen extends StatelessWidget {
@@ -8,10 +9,23 @@ class LandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
-        child: SafeArea(
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final theme = Theme.of(context);
+        return Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFFFF),
+                  Color(0xFFF6F7FB),
+                  Color(0xFFE5E7EB),
+                ],
+              ),
+            ),
+            child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -25,7 +39,7 @@ class LandingScreen extends StatelessWidget {
                       style: GoogleFonts.getFont(
                         'Imperial Script',
                         fontSize: 64,
-                        color: Colors.white,
+                        color: theme.colorScheme.primary,
                         shadows: [
                           const Shadow(
                             offset: Offset(2, 2),
@@ -34,14 +48,26 @@ class LandingScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     Text(
-                      'Para sa mga Reyna ng Tahanan 👑',
-                      style: GoogleFonts.dancingScript(
-                        fontSize: 24,
-                        color: Colors.white.withOpacity(0.9),
+                      'Para sa mga Reyna ng Tindahan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        fontStyle: FontStyle.italic,
+                        fontFamily: 'Inter',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      'Choggy Bear Mini Store',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -54,7 +80,7 @@ class LandingScreen extends StatelessWidget {
                       'Choose Platform:',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
-                        color: Colors.white,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -95,7 +121,7 @@ class LandingScreen extends StatelessWidget {
                   'Select your platform to experience the app!',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: AppTheme.textSecondary,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -103,8 +129,8 @@ class LandingScreen extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -139,11 +165,11 @@ class _PlatformButton extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: isSecondary 
-          ? Colors.white.withOpacity(0.2)
-          : Colors.white.withOpacity(0.25),
+          ? Theme.of(context).colorScheme.surface.withOpacity(0.3)
+          : Theme.of(context).colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.18),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -170,22 +196,22 @@ class _PlatformButton extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         subtitle,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.white70,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white70,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
               ],

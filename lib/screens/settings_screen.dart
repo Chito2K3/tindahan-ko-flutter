@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
 import '../models/product.dart';
-import '../utils/theme.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
 import 'package:universal_html/html.dart' as html;
@@ -20,19 +18,20 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<AppProvider, ThemeProvider>(
+      builder: (context, provider, themeProvider, child) {
+        final theme = Theme.of(context);
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Settings',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -110,26 +109,26 @@ class _SettingsCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
       ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.white70),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios,
-          color: Colors.white70,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           size: 16,
         ),
         onTap: onTap,
@@ -177,8 +176,8 @@ class _StoreInfoDialogState extends State<_StoreInfoDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.grey[900],
-      title: const Text('Store Information', style: TextStyle(color: Colors.white)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      title: Text('Store Information', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
       content: SizedBox(
         width: 300,
         child: Form(
@@ -188,47 +187,47 @@ class _StoreInfoDialogState extends State<_StoreInfoDialog> {
             children: [
               TextFormField(
                 controller: _storeNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   labelText: 'Store Name',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                   ),
                 ),
                 validator: (value) => value?.isEmpty == true ? 'Required' : null,
               ),
               TextFormField(
                 controller: _ownerNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   labelText: 'Owner Name',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                   ),
                 ),
                 validator: (value) => value?.isEmpty == true ? 'Required' : null,
               ),
               TextFormField(
                 controller: _addressController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   labelText: 'Address',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                   ),
                 ),
               ),
               TextFormField(
                 controller: _phoneController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -239,11 +238,11 @@ class _StoreInfoDialogState extends State<_StoreInfoDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
         ),
         TextButton(
           onPressed: _saveStoreInfo,
-          child: const Text('Save', style: TextStyle(color: AppTheme.primaryPink)),
+          child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
         ),
       ],
     );
@@ -261,9 +260,9 @@ class _StoreInfoDialogState extends State<_StoreInfoDialog> {
     Navigator.pop(context);
     widget.onUpdated?.call();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text('Store information saved'),
-        backgroundColor: AppTheme.primaryPink,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -284,21 +283,21 @@ class _BackupDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.grey[900],
-      title: const Text('Backup & Restore', style: TextStyle(color: Colors.white)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      title: Text('Backup & Restore', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.upload, color: AppTheme.primaryPink),
-            title: const Text('Export to Excel', style: TextStyle(color: Colors.white)),
-            subtitle: const Text('Download products as .xlsx file', style: TextStyle(color: Colors.white70)),
+            leading: Icon(Icons.upload, color: Theme.of(context).colorScheme.primary),
+            title: Text('Export to Excel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            subtitle: Text('Download products as .xlsx file', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
             onTap: () => _exportData(context),
           ),
           ListTile(
-            leading: const Icon(Icons.download, color: AppTheme.primaryPink),
-            title: const Text('Import from Excel', style: TextStyle(color: Colors.white)),
-            subtitle: const Text('Upload .xlsx file to restore products', style: TextStyle(color: Colors.white70)),
+            leading: Icon(Icons.download, color: Theme.of(context).colorScheme.primary),
+            title: Text('Import from Excel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            subtitle: Text('Upload .xlsx file to restore products', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
             onTap: () => _importData(context),
           ),
         ],
@@ -306,7 +305,7 @@ class _BackupDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close', style: TextStyle(color: Colors.white70)),
+          child: Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
         ),
       ],
     );
@@ -366,24 +365,24 @@ class _BackupDialog extends StatelessWidget {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Text('Export Successful', style: TextStyle(color: Colors.white)),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Export Successful', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.check_circle, color: Colors.green, size: 48),
               const SizedBox(height: 16),
-              const Text('Products exported to Excel successfully!', style: TextStyle(color: Colors.white)),
+              Text('Products exported to Excel successfully!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               const SizedBox(height: 8),
-              Text('${products.length} products exported', style: const TextStyle(color: Colors.white70)),
+              Text('${products.length} products exported', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               const SizedBox(height: 8),
-              const Text('File: tindahan_ko_products.xlsx', style: TextStyle(color: Colors.pink, fontSize: 12)),
+              Text('File: tindahan_ko_products.xlsx', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+              child: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
         ),
@@ -452,8 +451,8 @@ class _BackupDialog extends StatelessWidget {
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: Colors.grey[900],
-              title: const Text('Confirm Import', style: TextStyle(color: Colors.white)),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              title: Text('Confirm Import', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -461,12 +460,12 @@ class _BackupDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Found ${products.length} products to import.',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'This will replace all existing products. Continue?',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -474,11 +473,11 @@ class _BackupDialog extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                  child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Import', style: TextStyle(color: AppTheme.primaryPink)),
+                  child: Text('Import', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                 ),
               ],
             ),
@@ -503,8 +502,8 @@ class _BackupDialog extends StatelessWidget {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                backgroundColor: Colors.grey[900],
-                title: const Text('Import Successful', style: TextStyle(color: Colors.white)),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                title: Text('Import Successful', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -512,7 +511,7 @@ class _BackupDialog extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       '${products.length} products imported successfully!',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -520,7 +519,7 @@ class _BackupDialog extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+                    child: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                   ),
                 ],
               ),
@@ -547,15 +546,15 @@ class _AboutDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryPink, Colors.purple],
+              gradient: LinearGradient(
+                colors: [Theme.of(context).colorScheme.primary, Colors.purple],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -564,7 +563,7 @@ class _AboutDialog extends StatelessWidget {
             child: const Icon(Icons.info, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
-          const Text('About', style: TextStyle(color: Colors.white, fontSize: 20)),
+          Text('About', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20)),
         ],
       ),
       content: SingleChildScrollView(
@@ -575,9 +574,9 @@ class _AboutDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,8 +587,8 @@ class _AboutDialog extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Tindahan Ko',
-                        style: const TextStyle(
-                          color: AppTheme.primaryPink,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -597,18 +596,18 @@ class _AboutDialog extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Para sa mga Reyna ng Tahanan 👑',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       const Icon(Icons.verified, color: Colors.green, size: 16),
                       const SizedBox(width: 6),
-                      const Text(
+                      Text(
                         'Version 1.4.0',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                       ),
                     ],
                   ),
@@ -616,33 +615,33 @@ class _AboutDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'A complete Point of Sale and Inventory Management System designed specifically for Filipino sari-sari stores.',
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.primaryPink.withOpacity(0.1), Colors.purple.withOpacity(0.1)],
+                  colors: [Theme.of(context).colorScheme.primary.withOpacity(0.1), Colors.purple.withOpacity(0.1)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primaryPink.withOpacity(0.3)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.code, color: AppTheme.primaryPink, size: 20),
+                      Icon(Icons.code, color: Theme.of(context).colorScheme.primary, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Developer',
                         style: TextStyle(
-                          color: AppTheme.primaryPink,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -652,12 +651,12 @@ class _AboutDialog extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.person, color: Colors.white70, size: 18),
+                      Icon(Icons.person, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 18),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Chito Saba',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
@@ -667,12 +666,12 @@ class _AboutDialog extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.email, color: Colors.white70, size: 18),
+                      Icon(Icons.email, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 18),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'chitosaba@gmail.com',
                         style: TextStyle(
-                          color: AppTheme.primaryPink,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 14,
                         ),
                       ),
@@ -682,27 +681,27 @@ class _AboutDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Key Features:',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text('📱 Native barcode scanning', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('💰 Point of Sale system', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('📦 Inventory management', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('🚬 Dual-unit cigarette system', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('📊 Real sales tracking & reports', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const Text('💾 Data backup & restore', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text('📱 Native barcode scanning', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+            Text('💰 Point of Sale system', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+            Text('📦 Inventory management', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+            Text('🚬 Dual-unit cigarette system', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+            Text('📊 Real sales tracking & reports', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+            Text('💾 Data backup & restore', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
             const SizedBox(height: 16),
             Center(
               child: Text(
                 '© 2024 Chito Saba. All rights reserved.',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   fontSize: 12,
                 ),
               ),
@@ -713,9 +712,9 @@ class _AboutDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
+          child: Text(
             'Close',
-            style: TextStyle(color: AppTheme.primaryPink, fontWeight: FontWeight.w600),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
           ),
         ),
       ],
