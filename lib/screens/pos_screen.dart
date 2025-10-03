@@ -56,7 +56,7 @@ class _POSScreenState extends State<POSScreen> {
   }
   
   void _selectProduct(Product product) {
-    if (product.isCigarette) {
+    if (product.isCigarette || product.category == 'cigarettes') {
       _showCigaretteSelectionDialog(product);
     } else {
       final provider = Provider.of<AppProvider>(context, listen: false);
@@ -283,7 +283,7 @@ class _POSScreenState extends State<POSScreen> {
                                               ),
                                             ),
                                             Text(
-                                              '₱${item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode).toStringAsFixed(2)}',
+                                              '₱${item.totalPrice.toStringAsFixed(2)}',
                                               style: TextStyle(
                                                 color: theme.colorScheme.onSurface.withOpacity(0.7),
                                                 fontSize: 12,
@@ -297,7 +297,15 @@ class _POSScreenState extends State<POSScreen> {
                                                   fontSize: 10,
                                                 ),
                                               ),
-                                            if (item.product.isCigarette)
+                                            if (item.product.isCigarette || item.product.category == 'cigarettes') ...[
+                                              Text(
+                                                item.displayQuantity,
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.primary,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                               GestureDetector(
                                                 onTap: () => provider.toggleCigaretteMode(index),
                                                 child: Container(
@@ -317,6 +325,7 @@ class _POSScreenState extends State<POSScreen> {
                                                   ),
                                                 ),
                                               ),
+                                            ],
                                           ],
                                         ),
                                       ),
@@ -513,7 +522,7 @@ class _POSScreenState extends State<POSScreen> {
       onBarcodeDetected: (barcode) {
         final product = provider.findProductByBarcode(barcode);
         if (product != null) {
-          if (product.isCigarette) {
+          if (product.isCigarette || product.category == 'cigarettes') {
             _showCigaretteSelectionDialog(product);
           } else {
             provider.addToCart(product);
@@ -574,12 +583,14 @@ class _POSScreenState extends State<POSScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${item.product.emoji} ${item.product.name} x${item.quantity}',
+                                  (item.product.isCigarette || item.product.category == 'cigarettes') 
+                                      ? '${item.product.emoji} ${item.product.name} (${item.isPackMode ? 'Pack' : 'Piece'}) x${item.quantity}'
+                                      : '${item.product.emoji} ${item.product.name} x${item.quantity}',
                                   style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                                 ),
                               ),
                               Text(
-                                '₱${item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode).toStringAsFixed(2)}',
+                                '₱${item.totalPrice.toStringAsFixed(2)}',
                                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                               ),
                             ],
@@ -736,12 +747,17 @@ class _POSScreenState extends State<POSScreen> {
   
   int _getIncrement(CartItem item) {
     if (item.product.isBatchSelling) return item.product.batchQuantity!;
-    if (item.product.isCigarette && item.isPackMode) return item.product.piecesPerPack!;
+    if ((item.product.isCigarette || item.product.category == 'cigarettes') && item.isPackMode) return item.product.piecesPerPack ?? 20;
     return 1;
   }
   
   void _updateQuantity(AppProvider provider, int index, int change, int increment) {
-    provider.updateCartQuantityByIncrement(index, change, increment);
+    final message = provider.updateCartQuantityByIncrement(index, change, increment);
+    if (message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
   
   void _confirmPayment(BuildContext context, AppProvider provider, double paymentAmount, double change) async {

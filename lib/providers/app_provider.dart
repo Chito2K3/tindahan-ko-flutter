@@ -16,8 +16,16 @@ class AppProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   List<Sale> get sales => _sales;
   
-  double get cartTotal => 
-    _cart.fold(0.0, (sum, item) => sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode));
+  double get cartTotal => _cart.fold(0.0, (sum, item) {
+    if (item.product.isCigarette || item.product.category == 'cigarettes') {
+      if (item.isPackMode) {
+        return sum + (item.quantity * (item.product.packPrice ?? 0));
+      } else {
+        return sum + (item.quantity * item.product.price);
+      }
+    }
+    return sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode);
+  });
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
   
@@ -31,10 +39,7 @@ class AppProvider extends ChangeNotifier {
       _products = await DatabaseService.getAllProducts();
       _sales = await DatabaseService.getAllSales();
       
-      // If no products exist, load sample data
-      if (_products.isEmpty) {
-        await _loadSampleData();
-      }
+      // Start with empty inventory for testing
     } catch (e) {
       print('Error loading products: $e');
     } finally {
@@ -114,9 +119,9 @@ class AppProvider extends ChangeNotifier {
       ),
       Product(
         id: 'p7',
-        name: 'Marlboro Red',
-        price: 6.50,
-        stock: 200,
+        name: 'Winston',
+        price: 10.00,
+        stock: 400,
         category: 'cigarettes',
         emoji: '🚬',
         reorderLevel: 40,
@@ -124,9 +129,9 @@ class AppProvider extends ChangeNotifier {
         barcode: '1234567890123',
         isCigarette: true,
         piecesPerPack: 20,
-        packPrice: 130.00,
+        packPrice: 190.00,
         loosePieces: 0,
-        fullPacks: 10,
+        fullPacks: 20,
         autoOpenPack: true,
       ),
     ];
@@ -143,42 +148,45 @@ class AppProvider extends ChangeNotifier {
   }
   
   void addToCart(Product product, {bool isPackMode = false}) {
-    final existingIndex = _cart.indexWhere((item) => item.product.id == product.id);
-    
-    if (existingIndex >= 0) {
-      int increment;
-      if (product.isCigarette) {
-        increment = isPackMode ? 1 : 1; // Always add 1 unit in the selected mode
-      } else {
-        increment = product.isBatchSelling ? product.batchQuantity! : 1;
-      }
+    if (product.isCigarette || product.category == 'cigarettes') {
+      // For cigarettes, find existing item with same mode
+      final existingIndex = _cart.indexWhere((item) => 
+        item.product.id == product.id && item.isPackMode == isPackMode);
       
-      // For cigarettes, check stock based on mode
-      bool canAdd = false;
-      if (product.isCigarette) {
+      if (existingIndex >= 0) {
+        // Add to existing cigarette cart item with same mode
+        final existingItem = _cart[existingIndex];
         if (isPackMode) {
-          canAdd = product.canSellPacks(_cart[existingIndex].quantity + increment);
+          if (product.canSellPacks(existingItem.quantity + 1)) {
+            existingItem.quantity += 1;
+          }
         } else {
-          canAdd = product.canSellPieces(_cart[existingIndex].quantity + increment);
+          if (product.canSellPieces(existingItem.quantity + 1)) {
+            existingItem.quantity += 1;
+          }
         }
       } else {
-        canAdd = _cart[existingIndex].quantity + increment <= product.stock;
-      }
-      
-      if (canAdd) {
-        _cart[existingIndex].quantity += increment;
-        if (product.isCigarette) {
-          _cart[existingIndex].isPackMode = isPackMode;
-        }
+        // Create new cigarette cart item for this mode
+        final newItem = CartItem(
+          product: product, 
+          quantity: 1, 
+          isPackMode: isPackMode,
+        );
+        _cart.add(newItem);
       }
     } else {
-      int initialQuantity;
-      if (product.isCigarette) {
-        initialQuantity = 1; // Always start with 1 unit
+      // Handle non-cigarette products
+      final existingIndex = _cart.indexWhere((item) => item.product.id == product.id);
+      
+      if (existingIndex >= 0) {
+        final increment = product.isBatchSelling ? product.batchQuantity! : 1;
+        if (_cart[existingIndex].quantity + increment <= product.stock) {
+          _cart[existingIndex].quantity += increment;
+        }
       } else {
-        initialQuantity = product.isBatchSelling ? product.batchQuantity! : 1;
+        final initialQuantity = product.isBatchSelling ? product.batchQuantity! : 1;
+        _cart.add(CartItem(product: product, quantity: initialQuantity));
       }
-      _cart.add(CartItem(product: product, quantity: initialQuantity, isPackMode: isPackMode));
     }
     notifyListeners();
   }
@@ -202,31 +210,43 @@ class AppProvider extends ChangeNotifier {
     }
   }
   
-  void updateCartQuantityByIncrement(int index, int change, int increment) {
+  String? updateCartQuantityByIncrement(int index, int change, int increment) {
     final item = _cart[index];
-    final actualIncrement = item.product.isCigarette && item.isPackMode ? item.product.piecesPerPack! : increment;
-    final newQuantity = item.quantity + (change * actualIncrement);
+    String? message;
     
-    if (newQuantity <= 0) {
-      removeFromCart(index);
-    } else {
-      // Check stock based on product type and mode
-      bool canUpdate = false;
-      if (item.product.isCigarette) {
-        if (item.isPackMode) {
-          canUpdate = item.product.canSellPacks(newQuantity);
-        } else {
-          canUpdate = item.product.canSellPieces(newQuantity);
-        }
-      } else {
-        canUpdate = newQuantity <= item.product.stock;
+    if (item.product.isCigarette || item.product.category == 'cigarettes') {
+      // Handle cigarette quantity updates
+      final newQuantity = item.quantity + change;
+      
+      if (newQuantity <= 0) {
+        removeFromCart(index);
+        return message;
       }
       
-      if (canUpdate) {
+      if (item.isPackMode) {
+        if (item.product.canSellPacks(newQuantity)) {
+          item.quantity = newQuantity;
+        }
+      } else {
+        if (newQuantity > 19) {
+          message = '20 pieces = 1 pack. Switch to Pack Mode for more.';
+        } else if (item.product.canSellPieces(newQuantity)) {
+          item.quantity = newQuantity;
+        }
+      }
+    } else {
+      // Handle non-cigarette products
+      final actualIncrement = increment;
+      final newQuantity = item.quantity + (change * actualIncrement);
+      
+      if (newQuantity <= 0) {
+        removeFromCart(index);
+      } else if (newQuantity <= item.product.stock) {
         item.quantity = newQuantity;
-        notifyListeners();
       }
     }
+    notifyListeners();
+    return message;
   }
   
   void clearCart() {
@@ -235,16 +255,8 @@ class AppProvider extends ChangeNotifier {
   }
   
   void toggleCigaretteMode(int index) {
-    if (index < _cart.length && _cart[index].product.isCigarette) {
+    if (index < _cart.length && (_cart[index].product.isCigarette || _cart[index].product.category == 'cigarettes')) {
       _cart[index].isPackMode = !_cart[index].isPackMode;
-      // Adjust quantity based on mode
-      if (_cart[index].isPackMode) {
-        // Convert pieces to packs
-        _cart[index].quantity = (_cart[index].quantity / _cart[index].product.piecesPerPack!).ceil();
-      } else {
-        // Convert packs to pieces
-        _cart[index].quantity = _cart[index].quantity * _cart[index].product.piecesPerPack!;
-      }
       notifyListeners();
     }
   }
@@ -256,18 +268,24 @@ class AppProvider extends ChangeNotifier {
       final saleItems = <SaleItem>[];
       
       // Add cart items
-      saleItems.addAll(_cart.map((cartItem) {
-        String productName = cartItem.product.name;
-        if (cartItem.product.isCigarette) {
-          productName += cartItem.isPackMode ? ' (Pack)' : ' (Piece)';
+      for (final cartItem in _cart) {
+        if (cartItem.product.isCigarette || cartItem.product.category == 'cigarettes') {
+          // Add cigarette item with mode suffix
+          saleItems.add(SaleItem(
+            productId: cartItem.product.id,
+            productName: '${cartItem.product.name} (${cartItem.isPackMode ? 'Pack' : 'Piece'})',
+            quantity: cartItem.quantity,
+            price: cartItem.isPackMode ? (cartItem.product.packPrice ?? 0) : cartItem.product.price,
+          ));
+        } else {
+          saleItems.add(SaleItem(
+            productId: cartItem.product.id,
+            productName: cartItem.product.name,
+            quantity: cartItem.quantity,
+            price: cartItem.product.getPriceForQuantity(1, isPackMode: cartItem.isPackMode),
+          ));
         }
-        return SaleItem(
-          productId: cartItem.product.id,
-          productName: productName,
-          quantity: cartItem.quantity,
-          price: cartItem.product.getPriceForQuantity(1, isPackMode: cartItem.isPackMode),
-        );
-      }));
+      }
       
 
       
@@ -284,7 +302,7 @@ class AppProvider extends ChangeNotifier {
       // Update stock in database and memory
       for (final cartItem in _cart) {
         final product = _products.firstWhere((p) => p.id == cartItem.product.id);
-        if (product.isCigarette) {
+        if (product.isCigarette || product.category == 'cigarettes') {
           if (cartItem.isPackMode) {
             product.sellPacks(cartItem.quantity);
           } else {
@@ -354,5 +372,31 @@ class CartItem {
   int quantity;
   bool isPackMode;
   
-  CartItem({required this.product, required this.quantity, this.isPackMode = false});
+  CartItem({
+    required this.product, 
+    required this.quantity, 
+    this.isPackMode = false,
+  });
+  
+  double get totalPrice {
+    if (product.isCigarette || product.category == 'cigarettes') {
+      if (isPackMode) {
+        return quantity * (product.packPrice ?? 0);
+      } else {
+        return quantity * product.price;
+      }
+    }
+    return product.getPriceForQuantity(quantity, isPackMode: isPackMode);
+  }
+  
+  String get displayQuantity {
+    if (product.isCigarette || product.category == 'cigarettes') {
+      return isPackMode ? '${quantity} pack${quantity > 1 ? 's' : ''}' : '${quantity} pc${quantity > 1 ? 's' : ''}';
+    }
+    return quantity.toString();
+  }
+  
+  bool get isEmpty {
+    return quantity == 0;
+  }
 }

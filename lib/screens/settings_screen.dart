@@ -10,6 +10,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
 import 'package:universal_html/html.dart' as html;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 
 class SettingsScreen extends StatelessWidget {
   final VoidCallback? onStoreInfoUpdated;
@@ -51,6 +54,17 @@ class SettingsScreen extends StatelessWidget {
                       subtitle: 'Export/Import data',
                       icon: Icons.backup,
                       onTap: () => _showBackupOptions(context),
+                    ),
+                    
+                    Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return _SettingsCard(
+                          title: 'Theme',
+                          subtitle: themeProvider.isDarkMode ? 'Dark mode enabled' : 'Light mode enabled',
+                          icon: themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                          onTap: () => themeProvider.toggleTheme(),
+                        );
+                      },
                     ),
                     
                     _SettingsCard(
@@ -348,17 +362,44 @@ class _BackupDialog extends StatelessWidget {
       
       // Save file
       final bytes = excel.encode();
+      final now = DateTime.now();
+      final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+      final fileName = 'TindahanKo$dateStr.xlsx';
+      
       if (kIsWeb) {
         final blob = html.Blob([bytes]);
         final url = html.Url.createObjectUrlFromBlob(blob);
         final anchor = html.AnchorElement()
           ..href = url
           ..style.display = 'none'
-          ..download = 'tindahan_ko_products.xlsx';
+          ..download = fileName;
         html.document.body?.append(anchor);
         anchor.click();
         anchor.remove();
         html.Url.revokeObjectUrl(url);
+      } else {
+        // For Android/iOS - save to Downloads folder
+        try {
+          final directory = await getExternalStorageDirectory();
+          if (directory != null) {
+            // Try to access Downloads folder
+            final downloadsPath = '/storage/emulated/0/Download';
+            final downloadsDir = Directory(downloadsPath);
+            if (await downloadsDir.exists()) {
+              final file = File(path.join(downloadsPath, fileName));
+              await file.writeAsBytes(bytes!);
+            } else {
+              // Fallback to app directory
+              final file = File(path.join(directory.path, fileName));
+              await file.writeAsBytes(bytes!);
+            }
+          }
+        } catch (e) {
+          // Fallback to app directory
+          final directory = await getApplicationDocumentsDirectory();
+          final file = File(path.join(directory.path, fileName));
+          await file.writeAsBytes(bytes!);
+        }
       }
       
       Navigator.pop(context);
@@ -376,7 +417,7 @@ class _BackupDialog extends StatelessWidget {
               const SizedBox(height: 8),
               Text('${products.length} products exported', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               const SizedBox(height: 8),
-              Text('File: tindahan_ko_products.xlsx', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
+              Text('File: $fileName', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
             ],
           ),
           actions: [
@@ -403,6 +444,7 @@ class _BackupDialog extends StatelessWidget {
         type: FileType.custom,
         allowedExtensions: ['xlsx', 'xls'],
         withData: true,
+        allowMultiple: false,
       );
       
       if (result != null && result.files.single.bytes != null) {

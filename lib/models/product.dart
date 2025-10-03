@@ -89,12 +89,12 @@ class Product {
     autoOpenPack: json['autoOpenPack'] ?? true,
   );
 
-  bool get isLowStock => isCigarette ? fullPacks <= reorderLevel : stock <= reorderLevel;
+  bool get isLowStock => (isCigarette || category == 'cigarettes') ? fullPacks <= reorderLevel : stock <= reorderLevel;
   
-  int get totalPieces => isCigarette ? (fullPacks * (piecesPerPack ?? 20)) + loosePieces : stock;
+  int get totalPieces => (isCigarette || category == 'cigarettes') ? (fullPacks * (piecesPerPack ?? 20)) + loosePieces : stock;
   
   bool canSellPieces(int quantity) {
-    if (!isCigarette) return stock >= quantity;
+    if (!isCigarette && category != 'cigarettes') return stock >= quantity;
     if (loosePieces >= quantity) return true;
     if (autoOpenPack && fullPacks > 0) {
       int neededFromPacks = quantity - loosePieces;
@@ -105,11 +105,11 @@ class Product {
   }
   
   bool canSellPacks(int quantity) {
-    return isCigarette ? fullPacks >= quantity : stock >= (quantity * (piecesPerPack ?? 20));
+    return (isCigarette || category == 'cigarettes') ? fullPacks >= quantity : stock >= (quantity * (piecesPerPack ?? 20));
   }
   
   void sellPieces(int quantity) {
-    if (!isCigarette) {
+    if (!isCigarette && category != 'cigarettes') {
       stock -= quantity;
       return;
     }
@@ -132,7 +132,7 @@ class Product {
   }
   
   void sellPacks(int quantity) {
-    if (!isCigarette) {
+    if (!isCigarette && category != 'cigarettes') {
       stock -= quantity * (piecesPerPack ?? 20);
       return;
     }
@@ -142,7 +142,7 @@ class Product {
   }
   
   double getPriceForQuantity(int quantity, {bool isPackMode = false}) {
-    if (isCigarette && packPrice != null) {
+    if ((isCigarette || category == 'cigarettes') && packPrice != null) {
       return isPackMode ? quantity * packPrice! : quantity * price;
     }
     
@@ -163,7 +163,7 @@ class Product {
   }
   
   String get displayPrice {
-    if (isCigarette && packPrice != null) {
+    if ((isCigarette || category == 'cigarettes') && packPrice != null) {
       return '${AppTheme.formatCurrency(price)}/pc • ${AppTheme.formatCurrency(packPrice!)}/pack';
     }
     
@@ -180,7 +180,7 @@ class Product {
   }
   
   String get stockDisplay {
-    if (isCigarette) {
+    if (isCigarette || category == 'cigarettes') {
       return '${fullPacks} packs + ${loosePieces} pcs';
     }
     return stock.toString();

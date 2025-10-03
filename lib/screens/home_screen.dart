@@ -86,61 +86,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Column(
                           children: [
-                            const Spacer(),
-                            Column(
-                              children: [
-                                Text(
-                                  'Tindahan Ko',
-                                  style: GoogleFonts.getFont(
-                                    'Imperial Script',
-                                    fontSize: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  'Para sa mga Reyna ng Tindahan',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                    fontStyle: FontStyle.italic,
-                                    fontFamily: 'Inter',
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  _storeName,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                            Text(
+                              'Tindahan Ko',
+                              style: GoogleFonts.getFont(
+                                'Imperial Script',
+                                fontSize: 28,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            const Spacer(),
-                            // Theme toggle button
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                ),
+                            Text(
+                              'Para sa mga Reyna ng Tindahan',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                fontStyle: FontStyle.italic,
+                                fontFamily: 'Inter',
                               ),
-                              child: IconButton(
-                                onPressed: () => themeProvider.toggleTheme(),
-                                icon: Icon(
-                                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                tooltip: themeProvider.isDarkMode ? 'Light Mode' : 'Dark Mode',
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              _storeName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
