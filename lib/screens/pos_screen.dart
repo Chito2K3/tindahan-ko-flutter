@@ -177,7 +177,7 @@ class _POSScreenState extends State<POSScreen> {
                                     style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
                                   ),
                                   trailing: Text(
-                                    'Stock: ${product.stock}',
+                                    'Stock: ${product.stockDisplay}',
                                     style: TextStyle(
                                       color: product.isLowStock ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 12,
@@ -316,7 +316,7 @@ class _POSScreenState extends State<POSScreen> {
                                                     border: Border.all(color: theme.colorScheme.primary, width: 0.5),
                                                   ),
                                                   child: Text(
-                                                    item.isPackMode ? 'Pack Mode' : 'Piece Mode',
+                                                    item.isPackMode ? 'Pack Mode' : 'Stick Mode',
                                                     style: TextStyle(
                                                       color: theme.colorScheme.primary,
                                                       fontSize: 9,
@@ -325,6 +325,15 @@ class _POSScreenState extends State<POSScreen> {
                                                   ),
                                                 ),
                                               ),
+                                              if (!item.isPackMode && item.quantity >= 15)
+                                                Text(
+                                                  item.quantity >= 19 ? 'Consider buying a pack instead' : 'Almost a full pack',
+                                                  style: TextStyle(
+                                                    color: Colors.orange,
+                                                    fontSize: 9,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
                                             ],
                                           ],
                                         ),
@@ -452,7 +461,7 @@ class _POSScreenState extends State<POSScreen> {
                     icon: const Icon(Icons.scatter_plot, size: 16),
                     label: Column(
                       children: [
-                        const Text('Piece', style: TextStyle(fontSize: 12)),
+                        const Text('Stick', style: TextStyle(fontSize: 12)),
                         Text('₱${product.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 10)),
                       ],
                     ),
@@ -502,7 +511,7 @@ class _POSScreenState extends State<POSScreen> {
       _showSearchResults = false;
       _searchResults = [];
     });
-    final unitText = unit == CigaretteUnit.piece ? 'piece' : 'pack';
+    final unitText = unit == CigaretteUnit.piece ? 'stick' : 'pack';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${product.name} ($unitText) added to cart!')),
     );
@@ -585,7 +594,7 @@ class _POSScreenState extends State<POSScreen> {
                               Expanded(
                                 child: Text(
                                   (item.product.isCigarette || item.product.category == 'cigarettes') 
-                                      ? '${item.product.emoji} ${item.product.name} (${item.isPackMode ? 'Pack' : 'Piece'}) x${item.quantity}'
+                                      ? '${item.product.emoji} ${item.product.name} (${item.isPackMode ? 'Pack' : 'Stick'}) x${item.quantity}'
                                       : '${item.product.emoji} ${item.product.name} x${item.quantity}',
                                   style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                                 ),
@@ -753,7 +762,7 @@ class _POSScreenState extends State<POSScreen> {
   
   int _getIncrement(CartItem item) {
     if (item.product.isBatchSelling) return item.product.batchQuantity!;
-    if ((item.product.isCigarette || item.product.category == 'cigarettes') && item.isPackMode) return item.product.piecesPerPack ?? 20;
+    if (item.product.isCigarette || item.product.category == 'cigarettes') return 1;
     return 1;
   }
   
@@ -811,61 +820,74 @@ class _POSScreenState extends State<POSScreen> {
             backgroundColor: theme.colorScheme.surface,
             title: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.green, size: 32),
-                const SizedBox(width: 12),
-                Text('Payment Successful!', style: TextStyle(color: theme.colorScheme.onSurface)),
+                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Payment Successful!', 
+                    style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🎉', style: TextStyle(fontSize: 48)),
-                const SizedBox(height: 16),
-                Text(
-                  'Total: ₱${totalAmount.toStringAsFixed(2)}',
-                  style: TextStyle(color: theme.colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Payment: ₱${paymentAmount.toStringAsFixed(2)}',
-                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
-                ),
-                if (change > 0) ...[
-                  const SizedBox(height: 4),
+            content: Container(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 12),
                   Text(
-                    'Change: ₱${change.toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                    'Total: ₱${totalAmount.toStringAsFixed(2)}',
+                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Payment: ₱${paymentAmount.toStringAsFixed(2)}',
+                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+                  ),
+                  if (change > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Change: ₱${change.toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Text(
+                    'Transaction completed successfully!',
+                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Date: ${DateTime.now().toString().split('.')[0]}',
+                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 10),
+                    textAlign: TextAlign.center,
                   ),
                 ],
-                const SizedBox(height: 12),
-                Text(
-                  'Transaction completed successfully!',
-                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Date: ${DateTime.now().toString().split('.')[0]}',
-                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
-                ),
-              ],
+              ),
             ),
             actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Sale completed successfully! 🎉'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sale completed successfully! 🎉'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Continue'),
                 ),
-                child: const Text('Continue'),
               ),
             ],
           ),

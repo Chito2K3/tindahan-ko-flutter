@@ -16,9 +16,8 @@ class Product {
   final bool isCigarette;
   final int? piecesPerPack; // Always 20 for cigarettes
   final double? packPrice;
-  int loosePieces; // Loose pieces available
-  int fullPacks; // Full packs available
-  bool autoOpenPack; // Auto-open pack when loose pieces run out
+  int packStock; // Pack stock only - this is what we track for cigarettes
+  int _stickBuffer = 0; // Internal stick buffer (loaded from database)
 
   Product({
     required this.id,
@@ -36,16 +35,8 @@ class Product {
     this.isCigarette = false,
     this.piecesPerPack = 20,
     this.packPrice,
-    this.loosePieces = 0,
-    this.fullPacks = 0,
-    this.autoOpenPack = true,
-  }) {
-    if (isCigarette) {
-      // For cigarettes, calculate packs and loose pieces from total stock
-      fullPacks = stock ~/ (piecesPerPack ?? 20);
-      loosePieces = stock % (piecesPerPack ?? 20);
-    }
-  }
+    this.packStock = 0,
+  });
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -63,9 +54,7 @@ class Product {
     'isCigarette': isCigarette,
     'piecesPerPack': piecesPerPack,
     'packPrice': packPrice,
-    'loosePieces': loosePieces,
-    'fullPacks': fullPacks,
-    'autoOpenPack': autoOpenPack,
+    'packStock': packStock,
   };
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -84,51 +73,61 @@ class Product {
     isCigarette: json['isCigarette'] ?? false,
     piecesPerPack: json['piecesPerPack'] ?? 20,
     packPrice: json['packPrice']?.toDouble(),
-    loosePieces: json['loosePieces'] ?? 0,
-    fullPacks: json['fullPacks'] ?? 0,
-    autoOpenPack: json['autoOpenPack'] ?? true,
+    packStock: json['packStock'] ?? 0,
   );
 
-  bool get isLowStock => (isCigarette || category == 'cigarettes') ? fullPacks <= reorderLevel : stock <= reorderLevel;
+  bool get isLowStock => (isCigarette || category == 'cigarettes') ? packStock <= reorderLevel : stock <= reorderLevel;
   
-  int get totalPieces => (isCigarette || category == 'cigarettes') ? (fullPacks * (piecesPerPack ?? 20)) + loosePieces : stock;
+  int get totalPieces => (isCigarette || category == 'cigarettes') ? (_stickBuffer + (packStock * (piecesPerPack ?? 20))) : stock;
   
-  bool canSellPieces(int quantity) {
+  int get stickBuffer => _stickBuffer;
+  
+  void setStickBuffer(int buffer) {
+    _stickBuffer = buffer;
+  }
+  
+  bool canSellSticks(int quantity) {
     if (!isCigarette && category != 'cigarettes') return stock >= quantity;
-    if (loosePieces >= quantity) return true;
-    if (autoOpenPack && fullPacks > 0) {
-      int neededFromPacks = quantity - loosePieces;
-      int packsNeeded = (neededFromPacks / (piecesPerPack ?? 20)).ceil();
-      return fullPacks >= packsNeeded;
-    }
-    return false;
+    // Check if we have enough sticks (from buffer + unopened packs)
+    int availableSticks = _stickBuffer + (packStock * (piecesPerPack ?? 20));
+    return availableSticks >= quantity;
   }
   
   bool canSellPacks(int quantity) {
-    return (isCigarette || category == 'cigarettes') ? fullPacks >= quantity : stock >= (quantity * (piecesPerPack ?? 20));
+    return (isCigarette || category == 'cigarettes') ? packStock >= quantity : stock >= (quantity * (piecesPerPack ?? 20));
   }
   
-  void sellPieces(int quantity) {
+  void sellSticks(int quantity) {
     if (!isCigarette && category != 'cigarettes') {
       stock -= quantity;
       return;
     }
     
-    if (loosePieces >= quantity) {
-      loosePieces -= quantity;
-    } else if (autoOpenPack && fullPacks > 0) {
-      int remaining = quantity - loosePieces;
-      loosePieces = 0;
+    int remaining = quantity;
+    
+    // First, use sticks from buffer
+    if (_stickBuffer >= remaining) {
+      _stickBuffer -= remaining;
+      return;
+    }
+    
+    // Use all buffer sticks first
+    remaining -= _stickBuffer;
+    _stickBuffer = 0;
+    
+    // Open packs as needed - deduct pack immediately when opened
+    while (remaining > 0 && packStock > 0) {
+      packStock--; // Deduct pack from inventory immediately
       
-      while (remaining > 0 && fullPacks > 0) {
-        fullPacks--;
-        loosePieces += (piecesPerPack ?? 20);
-        int toTake = remaining > loosePieces ? loosePieces : remaining;
-        loosePieces -= toTake;
-        remaining -= toTake;
+      if (remaining >= (piecesPerPack ?? 20)) {
+        // Need entire pack or more
+        remaining -= (piecesPerPack ?? 20);
+      } else {
+        // Need partial pack - put remainder in buffer
+        _stickBuffer = (piecesPerPack ?? 20) - remaining;
+        remaining = 0;
       }
     }
-    stock = (fullPacks * (piecesPerPack ?? 20)) + loosePieces;
   }
   
   void sellPacks(int quantity) {
@@ -137,8 +136,7 @@ class Product {
       return;
     }
     
-    fullPacks -= quantity;
-    stock = (fullPacks * (piecesPerPack ?? 20)) + loosePieces;
+    packStock -= quantity;
   }
   
   double getPriceForQuantity(int quantity, {bool isPackMode = false}) {
@@ -181,7 +179,7 @@ class Product {
   
   String get stockDisplay {
     if (isCigarette || category == 'cigarettes') {
-      return '${fullPacks} packs + ${loosePieces} pcs';
+      return '${packStock} packs${_stickBuffer > 0 ? ' + ${_stickBuffer} sticks' : ''}';
     }
     return stock.toString();
   }

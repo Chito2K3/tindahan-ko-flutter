@@ -39,6 +39,14 @@ class AppProvider extends ChangeNotifier {
       _products = await DatabaseService.getAllProducts();
       _sales = await DatabaseService.getAllSales();
       
+      // Load stick buffers for cigarette products
+      for (final product in _products) {
+        if (product.isCigarette || product.category == 'cigarettes') {
+          final buffer = await DatabaseService.getStickBuffer(product.id);
+          product.setStickBuffer(buffer);
+        }
+      }
+      
       // Start with empty inventory for testing
     } catch (e) {
       print('Error loading products: $e');
@@ -130,9 +138,7 @@ class AppProvider extends ChangeNotifier {
         isCigarette: true,
         piecesPerPack: 20,
         packPrice: 190.00,
-        loosePieces: 0,
-        fullPacks: 20,
-        autoOpenPack: true,
+        packStock: 20,
       ),
     ];
     
@@ -157,12 +163,12 @@ class AppProvider extends ChangeNotifier {
         // Add to existing cigarette cart item with same mode
         final existingItem = _cart[existingIndex];
         if (isPackMode) {
-          if (existingItem.quantity + 1 <= product.fullPacks) {
+          if (existingItem.quantity + 1 <= product.packStock) {
             existingItem.quantity += 1;
           }
         } else {
-          final totalAvailable = product.loosePieces + (product.fullPacks * 20);
-          if (existingItem.quantity + 1 <= totalAvailable) {
+          // Check if we can sell more sticks
+          if (product.canSellSticks(existingItem.quantity + 1)) {
             existingItem.quantity += 1;
           }
         }
@@ -226,24 +232,21 @@ class AppProvider extends ChangeNotifier {
       
       if (item.isPackMode) {
         // Check pack stock
-        final availablePacks = item.product.fullPacks;
+        final availablePacks = item.product.packStock;
         if (newQuantity > availablePacks) {
-          message = 'We can only sell $availablePacks of ${item.product.name}.';
+          message = 'Only ${availablePacks} pack${availablePacks != 1 ? 's' : ''} available for ${item.product.name}.';
         } else {
           item.quantity = newQuantity;
         }
       } else {
-        // Check piece stock and 19 limit
+        // Check stick availability and limit to 19 per cart item
         if (newQuantity > 19) {
-          message = '20 pieces = 1 pack. Switch to Pack Mode for more.';
+          message = 'Maximum 19 sticks per cart item. Add as pack for more.';
+        } else if (!item.product.canSellSticks(newQuantity)) {
+          final totalAvailable = item.product.totalPieces;
+          message = 'Only ${totalAvailable} stick${totalAvailable != 1 ? 's' : ''} available for ${item.product.name}.';
         } else {
-          final availablePieces = item.product.loosePieces;
-          final totalAvailable = availablePieces + (item.product.fullPacks * 20);
-          if (newQuantity > totalAvailable) {
-            message = 'We can only sell $totalAvailable pieces of ${item.product.name}.';
-          } else {
-            item.quantity = newQuantity;
-          }
+          item.quantity = newQuantity;
         }
       }
     } else {
@@ -285,7 +288,7 @@ class AppProvider extends ChangeNotifier {
           // Add cigarette item with mode suffix
           saleItems.add(SaleItem(
             productId: cartItem.product.id,
-            productName: '${cartItem.product.name} (${cartItem.isPackMode ? 'Pack' : 'Piece'})',
+            productName: '${cartItem.product.name} (${cartItem.isPackMode ? 'Pack' : 'Stick'})',
             quantity: cartItem.quantity,
             price: cartItem.isPackMode ? (cartItem.product.packPrice ?? 0) : cartItem.product.price,
           ));
@@ -318,8 +321,10 @@ class AppProvider extends ChangeNotifier {
           if (cartItem.isPackMode) {
             product.sellPacks(cartItem.quantity);
           } else {
-            product.sellPieces(cartItem.quantity);
+            product.sellSticks(cartItem.quantity);
           }
+          // Update stick buffer in database - critical for persistence
+          await DatabaseService.updateStickBuffer(product.id, product.stickBuffer);
         } else {
           product.stock -= cartItem.quantity;
         }
@@ -354,6 +359,10 @@ class AppProvider extends ChangeNotifier {
   Future<void> updateProduct(Product updatedProduct) async {
     try {
       await DatabaseService.updateProduct(updatedProduct);
+      // Update stick buffer if it's a cigarette
+      if (updatedProduct.isCigarette || updatedProduct.category == 'cigarettes') {
+        await DatabaseService.updateStickBuffer(updatedProduct.id, updatedProduct.stickBuffer);
+      }
       final index = _products.indexWhere((p) => p.id == updatedProduct.id);
       if (index != -1) {
         _products[index] = updatedProduct;
@@ -368,6 +377,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteProduct(String productId) async {
     try {
       await DatabaseService.deleteProduct(productId);
+      await DatabaseService.deleteStickBuffer(productId);
       _products.removeWhere((p) => p.id == productId);
       // Also remove from cart if present
       _cart.removeWhere((item) => item.product.id == productId);
@@ -403,7 +413,7 @@ class CartItem {
   
   String get displayQuantity {
     if (product.isCigarette || product.category == 'cigarettes') {
-      return isPackMode ? '${quantity} pack${quantity > 1 ? 's' : ''}' : '${quantity} pc${quantity > 1 ? 's' : ''}';
+      return isPackMode ? '${quantity} pack${quantity > 1 ? 's' : ''}' : '${quantity} stick${quantity > 1 ? 's' : ''}';
     }
     return quantity.toString();
   }

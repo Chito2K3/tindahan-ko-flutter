@@ -99,7 +99,7 @@ class CigaretteCartItemWidget extends StatelessWidget {
               const Icon(Icons.scatter_plot, color: Colors.white70, size: 16),
               const SizedBox(width: 8),
               const Text(
-                'Pieces:',
+                'Sticks:',
                 style: TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const Spacer(),
@@ -134,7 +134,7 @@ class CigaretteCartItemWidget extends StatelessWidget {
               const Icon(Icons.info_outline, color: Colors.white54, size: 14),
               const SizedBox(width: 4),
               Text(
-                'Stock: ${item.product.stockDisplay}',
+                'Available: ${item.product.stockDisplay}',
                 style: const TextStyle(color: Colors.white54, fontSize: 10),
               ),
             ],
@@ -146,7 +146,14 @@ class CigaretteCartItemWidget extends StatelessWidget {
 
   void _updateQuantity(BuildContext context, CigaretteUnit unit, int change) {
     final provider = Provider.of<AppProvider>(context, listen: false);
-    provider.updateCigaretteQuantity(index, unit, change);
+    // This method doesn't exist in AppProvider, so we need to handle it differently
+    // For now, we'll use the existing cart update logic
+    final message = provider.updateCartQuantityByIncrement(index, change, 1);
+    if (message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
 }
 

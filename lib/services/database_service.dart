@@ -7,11 +7,12 @@ import '../models/sale.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'tindahan_ko.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   static const String _productsTable = 'products';
   static const String _salesTable = 'sales';
   static const String _saleItemsTable = 'sale_items';
+  static const String _stickBufferTable = 'stick_buffer';
 
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -72,6 +73,14 @@ class DatabaseService {
         FOREIGN KEY (saleId) REFERENCES $_salesTable (id)
       )
     ''');
+    
+    await db.execute('''
+      CREATE TABLE $_stickBufferTable (
+        productId TEXT PRIMARY KEY,
+        remainingSticks INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (productId) REFERENCES $_productsTable (id)
+      )
+    ''');
   }
   
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -109,6 +118,15 @@ class DatabaseService {
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN loosePieces INTEGER DEFAULT 0');
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN fullPacks INTEGER DEFAULT 0');
       await db.execute('ALTER TABLE $_productsTable ADD COLUMN autoOpenPack INTEGER DEFAULT 1');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE $_stickBufferTable (
+          productId TEXT PRIMARY KEY,
+          remainingSticks INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (productId) REFERENCES $_productsTable (id)
+        )
+      ''');
     }
   }
 
@@ -167,7 +185,7 @@ class DatabaseService {
       'id': product.id,
       'name': product.name,
       'price': product.price,
-      'stock': product.stock,
+      'stock': product.isCigarette ? product.packStock : product.stock,
       'category': product.category,
       'emoji': product.emoji,
       'reorderLevel': product.reorderLevel,
@@ -179,18 +197,16 @@ class DatabaseService {
       'isCigarette': product.isCigarette ? 1 : 0,
       'piecesPerPack': product.piecesPerPack,
       'packPrice': product.packPrice,
-      'loosePieces': product.loosePieces,
-      'fullPacks': product.fullPacks,
-      'autoOpenPack': product.autoOpenPack ? 1 : 0,
     };
   }
 
   static Product _productFromMap(Map<String, dynamic> map) {
+    final isCigarette = (map['isCigarette'] ?? 0) == 1;
     return Product(
       id: map['id'],
       name: map['name'],
       price: map['price'],
-      stock: map['stock'],
+      stock: isCigarette ? 0 : map['stock'], // Non-cigarettes use stock normally
       category: map['category'],
       emoji: map['emoji'],
       reorderLevel: map['reorderLevel'],
@@ -199,12 +215,10 @@ class DatabaseService {
       isBatchSelling: map['isBatchSelling'] == 1,
       batchQuantity: map['batchQuantity'],
       batchPrice: map['batchPrice'],
-      isCigarette: (map['isCigarette'] ?? 0) == 1,
+      isCigarette: isCigarette,
       piecesPerPack: map['piecesPerPack'] ?? 20,
       packPrice: map['packPrice'],
-      loosePieces: map['loosePieces'] ?? 0,
-      fullPacks: map['fullPacks'] ?? 0,
-      autoOpenPack: (map['autoOpenPack'] ?? 1) == 1,
+      packStock: isCigarette ? map['stock'] : 0, // Cigarettes use stock as packStock
     );
   }
 
@@ -293,5 +307,34 @@ class DatabaseService {
     }
     
     return sales;
+  }
+
+  // Stick buffer operations
+  static Future<int> getStickBuffer(String productId) async {
+    final db = await database;
+    final result = await db.query(
+      _stickBufferTable,
+      where: 'productId = ?',
+      whereArgs: [productId],
+    );
+    return result.isNotEmpty ? result.first['remainingSticks'] as int : 0;
+  }
+
+  static Future<void> updateStickBuffer(String productId, int remainingSticks) async {
+    final db = await database;
+    await db.insert(
+      _stickBufferTable,
+      {'productId': productId, 'remainingSticks': remainingSticks},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<void> deleteStickBuffer(String productId) async {
+    final db = await database;
+    await db.delete(
+      _stickBufferTable,
+      where: 'productId = ?',
+      whereArgs: [productId],
+    );
   }
 }
