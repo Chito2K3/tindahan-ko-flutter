@@ -19,11 +19,48 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   late TabController _tabController;
   String _selectedPeriod = 'Daily';
   DateTime? _selectedDate;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _showSearchResults = false;
+  List<Product> _searchResults = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _searchController.addListener(_onSearchChanged);
+  }
+  
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _tabController.dispose();
+    super.dispose();
+  }
+  
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase().trim();
+    if (query.isEmpty) {
+      setState(() {
+        _showSearchResults = false;
+        _searchResults = [];
+      });
+      return;
+    }
+    
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    final results = provider.products.where((product) {
+      return product.name.toLowerCase().contains(query) ||
+             product.category.toLowerCase().contains(query) ||
+             (product.barcode?.contains(query) ?? false);
+    }).toList();
+    
+    setState(() {
+      _showSearchResults = true;
+      _searchResults = results;
+    });
   }
 
   @override
@@ -519,41 +556,147 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
             style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          Row(
+          Column(
             children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
-                  ),
-                  child: TextField(
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: 'Search product stock...',
-                      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                      prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Search product stock...',
+                          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _showSearchResults = false;
+                                      _searchResults = [];
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
                     ),
-                    onSubmitted: (query) => _searchProductStock(context, provider, query),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+                    ),
+                    child: IconButton(
+                      onPressed: () => _scanForStock(context, provider),
+                      icon: Icon(Icons.qr_code_scanner, color: theme.colorScheme.primary),
+                      tooltip: 'Scan for Stock',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+              // Search Results Dropdown
+              if (_showSearchResults)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  ),
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: _searchResults.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.search_off, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Product not found',
+                                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final product = _searchResults[index];
+                            return ListTile(
+                              leading: Text(
+                                product.emoji,
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                              title: Text(
+                                product.name,
+                                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.displayPrice,
+                                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
+                                  ),
+                                  Text(
+                                    product.category,
+                                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _getStockDisplay(product),
+                                    style: TextStyle(
+                                      color: product.isOutOfStock
+                                          ? Colors.red
+                                          : product.isLowStock
+                                              ? Colors.orange
+                                              : theme.colorScheme.onSurface,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Stock',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              onTap: () {
+                                _searchController.clear();
+                                _searchFocusNode.unfocus();
+                                setState(() {
+                                  _showSearchResults = false;
+                                  _searchResults = [];
+                                });
+                                _showStockResults(context, [product], 'Stock Info - ${product.name}');
+                              },
+                            );
+                          },
+                        ),
                 ),
-                child: IconButton(
-                  onPressed: () => _scanForStock(context, provider),
-                  icon: Icon(Icons.qr_code_scanner, color: theme.colorScheme.primary),
-                  tooltip: 'Scan for Stock',
-                ),
-              ),
             ],
           ),
         ],
@@ -561,14 +704,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     );
   }
 
-  void _searchProductStock(BuildContext context, AppProvider provider, String query) {
-    final products = provider.products.where((p) => 
-      p.name.toLowerCase().contains(query.toLowerCase()) ||
-      (p.barcode?.contains(query) ?? false)
-    ).toList();
-    
-    _showStockResults(context, products, 'Search Results for "$query"');
-  }
+
 
   void _scanForStock(BuildContext context, AppProvider provider) {
     BarcodeService.showBarcodeScanner(
@@ -740,12 +876,16 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         return 'No sales data available';
     }
   }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  
+  String _getStockDisplay(Product product) {
+    if (product.isCigarette || product.category == 'cigarettes') {
+      if (product.isOutOfStock) return '0 packs';
+      return '${product.packStock} pack${product.packStock != 1 ? 's' : ''}';
+    }
+    return product.isOutOfStock ? '0' : '${product.stock}';
   }
+
+
 }
 
 class _StockResultsScreen extends StatelessWidget {
