@@ -384,7 +384,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     return Builder(
       builder: (context) {
         final theme = Theme.of(context);
-        final lowStockProducts = products.where((p) => p.stock <= p.reorderLevel).toList();
+        final lowStockProducts = products.where((p) => p.isVeryLowStock).toList();
         
         return Container(
           padding: const EdgeInsets.all(20),
@@ -446,7 +446,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                               style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              'Stock: ${product.stock} (Reorder at: ${product.reorderLevel})',
+                              _getStockStatusText(product),
                               style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                             ),
                           ],
@@ -459,7 +459,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
-                          'LOW',
+                          'VERY LOW',
                           style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -471,6 +471,13 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         );
       }
     );
+  }
+  
+  String _getStockStatusText(Product product) {
+    if (product.isCigarette || product.category == 'cigarettes') {
+      return 'Stock: ${product.packStock} packs (Reorder at: ${product.reorderLevel})';
+    }
+    return 'Stock: ${product.stock} (Reorder at: ${product.reorderLevel})';
   }
 
   List<FlSpot> _generateSalesData(List<Sale> sales) {
@@ -668,7 +675,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                                     style: TextStyle(
                                       color: product.isOutOfStock
                                           ? Colors.red
-                                          : product.isLowStock
+                                          : product.isAtOrBelowReorderLevel
                                               ? Colors.orange
                                               : theme.colorScheme.onSurface,
                                       fontSize: 14,
@@ -733,7 +740,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   void _showLowStockDetails(BuildContext context, AppProvider provider) {
-    final lowStockProducts = provider.products.where((p) => p.isLowStock && !p.isOutOfStock).toList();
+    final lowStockProducts = provider.products.where((p) => p.isAtOrBelowReorderLevel).toList();
     _showStockResults(context, lowStockProducts, 'Low Stock Items');
   }
 
@@ -940,14 +947,14 @@ class _StockResultsScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: product.isOutOfStock
                         ? Colors.red.withOpacity(0.1)
-                        : product.isLowStock
+                        : product.isAtOrBelowReorderLevel
                             ? Colors.orange.withOpacity(0.1)
                             : theme.colorScheme.surface.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: product.isOutOfStock
                           ? Colors.red.withOpacity(0.5)
-                          : product.isLowStock
+                          : product.isAtOrBelowReorderLevel
                               ? Colors.orange.withOpacity(0.5)
                               : theme.colorScheme.outline.withOpacity(0.2),
                     ),
@@ -998,7 +1005,7 @@ class _StockResultsScreen extends StatelessWidget {
                             style: TextStyle(
                               color: product.isOutOfStock
                                   ? Colors.red
-                                  : product.isLowStock
+                                  : product.isAtOrBelowReorderLevel
                                       ? Colors.orange
                                       : theme.colorScheme.onSurface,
                               fontSize: 18,
@@ -1029,7 +1036,7 @@ class _StockResultsScreen extends StatelessWidget {
                                 ),
                               ),
                             )
-                          else if (product.isLowStock)
+                          else if (product.isAtOrBelowReorderLevel)
                             Container(
                               margin: const EdgeInsets.only(top: 4),
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1037,9 +1044,9 @@ class _StockResultsScreen extends StatelessWidget {
                                 color: Colors.orange.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Text(
-                                'LOW STOCK',
-                                style: TextStyle(
+                              child: Text(
+                                product.isVeryLowStock ? 'VERY LOW' : 'LOW STOCK',
+                                style: const TextStyle(
                                   color: Colors.orange,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,

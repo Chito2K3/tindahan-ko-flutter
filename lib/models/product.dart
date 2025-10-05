@@ -76,9 +76,13 @@ class Product {
     packStock: json['packStock'] ?? 0,
   );
 
-  bool get isLowStock => (isCigarette || category == 'cigarettes') ? packStock <= reorderLevel : stock <= reorderLevel;
+  bool get isLowStock => (isCigarette || category == 'cigarettes') ? packStock == reorderLevel : stock == reorderLevel;
+  
+  bool get isVeryLowStock => (isCigarette || category == 'cigarettes') ? packStock < reorderLevel && packStock > 0 : stock < reorderLevel && stock > 0;
   
   bool get isOutOfStock => (isCigarette || category == 'cigarettes') ? packStock <= 0 && _stickBuffer <= 0 : stock <= 0;
+  
+  bool get isAtOrBelowReorderLevel => (isCigarette || category == 'cigarettes') ? packStock <= reorderLevel && packStock > 0 : stock <= reorderLevel && stock > 0;
   
   int get totalPieces => (isCigarette || category == 'cigarettes') ? (_stickBuffer + (packStock * (piecesPerPack ?? 20))) : stock;
   

@@ -27,7 +27,7 @@ class AppProvider extends ChangeNotifier {
     return sum + item.product.getPriceForQuantity(item.quantity, isPackMode: item.isPackMode);
   });
   int get totalProducts => _products.length;
-  int get lowStockCount => _products.where((p) => p.isLowStock).length;
+  int get lowStockCount => _products.where((p) => p.isAtOrBelowReorderLevel).length;
   int get outOfStockCount => _products.where((p) => p.isOutOfStock).length;
   
 
