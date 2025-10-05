@@ -90,6 +90,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   bool _hasPermission = false;
   bool _isFlashOn = false;
   bool _showManualInput = false;
+  final Set<String> _scannedCodes = {};
   String? _lastScannedCode;
   DateTime? _lastScanTime;
   
@@ -164,6 +165,26 @@ class _BarcodeScannerState extends State<BarcodeScanner>
                 color: Colors.white,
               ),
             ),
+          // Clear scanned codes button
+          if (_scannedCodes.isNotEmpty)
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _scannedCodes.clear();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Scanned history cleared'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.refresh,
+                color: Colors.white,
+              ),
+              tooltip: 'Clear scanned history',
+            ),
         ],
       ),
       body: Stack(
@@ -182,6 +203,28 @@ class _BarcodeScannerState extends State<BarcodeScanner>
           
           // Instructions
           _buildInstructions(),
+          
+          // Scanned count indicator
+          if (_scannedCodes.isNotEmpty && !_showManualInput)
+            Positioned(
+              top: 100,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF69B4).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Scanned: ${_scannedCodes.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -371,13 +414,40 @@ class _BarcodeScannerState extends State<BarcodeScanner>
           color: Colors.black54,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text(
-          'Position barcode within the frame\nScanning will happen automatically',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Position barcode within the frame',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Scanning will happen automatically',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+            if (_scannedCodes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Tap refresh (↻) to clear scanned history',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -391,79 +461,174 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   }
 
   void _onBarcodeFound(String barcode) {
-    // Prevent duplicate scans within 2 seconds
-    final now = DateTime.now();
-    if (_lastScannedCode == barcode && 
-        _lastScanTime != null && 
-        now.difference(_lastScanTime!).inSeconds < 2) {
+    if (!_isScanning) return;
+    
+    // Check if this barcode was already scanned
+    if (_scannedCodes.contains(barcode)) {
+      _showAlreadyScannedMessage(barcode);
       return;
     }
     
-    if (!_isScanning) return;
+    // Add to scanned codes set
+    _scannedCodes.add(barcode);
     
     setState(() {
-      _isScanning = false;
       _lastScannedCode = barcode;
-      _lastScanTime = now;
+      _lastScanTime = DateTime.now();
     });
     
     // Play beep sound and vibrate
     BarcodeService.playBeepSound();
     
-    // Show success feedback
+    // Show success feedback but don't close scanner
     _showSuccessFeedback(barcode);
     
-    // Close scanner after delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        Navigator.pop(context);
-        widget.onBarcodeDetected(barcode);
-      }
-    });
+    // Process the barcode but keep scanner open
+    widget.onBarcodeDetected(barcode);
   }
 
   void _showSuccessFeedback(String barcode) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.green,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.check_circle,
-                color: Colors.white,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Barcode Scanned!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+    // Show a brief overlay message instead of a dialog
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).size.height * 0.3,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                barcode,
-                style: const TextStyle(
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
                   color: Colors.white,
-                  fontSize: 16,
+                  size: 24,
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Barcode Scanned!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        barcode,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+    
+    overlay.insert(overlayEntry);
+    
+    // Remove the overlay after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry.remove();
+    });
+  }
+  
+  void _showAlreadyScannedMessage(String barcode) {
+    // Show a brief overlay message for already scanned items
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).size.height * 0.3,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Already Scanned',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        barcode,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    overlay.insert(overlayEntry);
+    
+    // Remove the overlay after 1.5 seconds
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      overlayEntry.remove();
+    });
   }
 
   void _toggleFlash() {

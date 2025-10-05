@@ -28,6 +28,7 @@ class AppProvider extends ChangeNotifier {
   });
   int get totalProducts => _products.length;
   int get lowStockCount => _products.where((p) => p.isLowStock).length;
+  int get outOfStockCount => _products.where((p) => p.isOutOfStock).length;
   
 
   

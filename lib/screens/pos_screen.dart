@@ -531,7 +531,14 @@ class _POSScreenState extends State<POSScreen> {
       onBarcodeDetected: (barcode) {
         final product = provider.findProductByBarcode(barcode);
         if (product != null) {
-          if (product.isCigarette || product.category == 'cigarettes') {
+          if (product.isOutOfStock) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${product.name} is out of stock'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          } else if (product.isCigarette || product.category == 'cigarettes') {
             _showCigaretteSelectionDialog(product);
           } else {
             provider.addToCart(product);
@@ -549,216 +556,14 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   void _processPayment(BuildContext context, AppProvider provider) {
-    final TextEditingController paymentController = TextEditingController();
-    final FocusNode paymentFocusNode = FocusNode();
-    final theme = Theme.of(context);
-    double totalAmount = provider.cartTotal;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          double paymentAmount = double.tryParse(paymentController.text) ?? 0.0;
-          double change = paymentAmount - totalAmount;
-          bool isValidPayment = paymentAmount >= totalAmount;
-          
-          return AlertDialog(
-            backgroundColor: theme.colorScheme.surface,
-            title: Row(
-              children: [
-                Icon(Icons.payment, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('Process Payment', style: TextStyle(color: theme.colorScheme.onSurface)),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order Summary:',
-                    style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 120),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: provider.cart.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  (item.product.isCigarette || item.product.category == 'cigarettes') 
-                                      ? '${item.product.emoji} ${item.product.name} (${item.isPackMode ? 'Pack' : 'Stick'}) x${item.quantity}'
-                                      : '${item.product.emoji} ${item.product.name} x${item.quantity}',
-                                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
-                                ),
-                              ),
-                              Text(
-                                '₱${item.totalPrice.toStringAsFixed(2)}',
-                                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        )).toList(),
-                      ),
-                    ),
-                  ),
-                  Divider(color: theme.colorScheme.outline.withOpacity(0.3)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Amount:',
-                        style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        '₱${totalAmount.toStringAsFixed(2)}',
-                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Payment Amount:',
-                    style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
-                    ),
-                    child: TextField(
-                      controller: paymentController,
-                      focusNode: paymentFocusNode,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      autofocus: true,
-                      style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
-                      decoration: InputDecoration(
-                        hintText: 'Enter payment amount',
-                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54)),
-                        prefixText: '₱',
-                        prefixStyle: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                      onTap: () {
-                        paymentFocusNode.requestFocus();
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (paymentAmount > 0) ...[
-                    if (isValidPayment) ...[
-                      if (change > 0) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.withOpacity(0.5)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Change:',
-                                style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '₱${change.toStringAsFixed(2)}',
-                                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.withOpacity(0.5)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.blue, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Exact payment',
-                                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withOpacity(0.5)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.error, color: Colors.red, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Insufficient payment',
-                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Need ₱${(totalAmount - paymentAmount).toStringAsFixed(2)} more',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
-              ),
-              ElevatedButton(
-                onPressed: isValidPayment && paymentAmount > 0 
-                    ? () => _confirmPayment(context, provider, paymentAmount, change)
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isValidPayment && paymentAmount > 0 
-                      ? theme.colorScheme.primary 
-                      : Colors.grey,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Confirm Payment'),
-              ),
-            ],
-          );
-        },
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _PaymentScreen(provider: provider),
+        fullscreenDialog: true,
       ),
     );
   }
+
   
   int _getIncrement(CartItem item) {
     if (item.product.isBatchSelling) return item.product.batchQuantity!;
@@ -775,7 +580,7 @@ class _POSScreenState extends State<POSScreen> {
     }
   }
   
-  void _confirmPayment(BuildContext context, AppProvider provider, double paymentAmount, double change) async {
+  void _confirmPaymentOld(BuildContext context, AppProvider provider, double paymentAmount, double change) async {
     final theme = Theme.of(context);
     Navigator.pop(context); // Close confirmation dialog
     
@@ -949,5 +754,480 @@ class _QuantityButton extends StatelessWidget {
         padding: EdgeInsets.zero,
       ),
     );
+  }
+}
+
+class _PaymentScreen extends StatefulWidget {
+  final AppProvider provider;
+
+  const _PaymentScreen({required this.provider});
+
+  @override
+  State<_PaymentScreen> createState() => _PaymentScreenState();
+}
+
+class _PaymentScreenState extends State<_PaymentScreen> {
+  final TextEditingController _paymentController = TextEditingController();
+  final FocusNode _paymentFocusNode = FocusNode();
+  late double _totalAmount;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalAmount = widget.provider.cartTotal;
+  }
+
+  @override
+  void dispose() {
+    _paymentController.dispose();
+    _paymentFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    double paymentAmount = double.tryParse(_paymentController.text) ?? 0.0;
+    double change = paymentAmount - _totalAmount;
+    bool isValidPayment = paymentAmount >= _totalAmount;
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.payment, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              'Process Payment',
+              style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Order Summary
+            Text(
+              'Order Summary:',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+              ),
+              child: Column(
+                children: [
+                  ...widget.provider.cart.map((item) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Text(item.product.emoji, style: const TextStyle(fontSize: 20)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            (item.product.isCigarette || item.product.category == 'cigarettes')
+                                ? '${item.product.name} (${item.isPackMode ? 'Pack' : 'Stick'}) x${item.quantity}'
+                                : '${item.product.name} x${item.quantity}',
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '₱${item.totalPrice.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                  Divider(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Amount:',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          '₱${_totalAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Payment Amount
+            Text(
+              'Payment Amount:',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+              ),
+              child: TextField(
+                controller: _paymentController,
+                focusNode: _paymentFocusNode,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 18),
+                decoration: InputDecoration(
+                  hintText: 'Enter payment amount',
+                  hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.54)),
+                  prefixText: '₱',
+                  prefixStyle: TextStyle(color: theme.colorScheme.onSurface, fontSize: 18),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+                onChanged: (value) => setState(() {}),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Payment Status
+            if (paymentAmount > 0) ..._buildPaymentStatus(theme, paymentAmount, change, isValidPayment),
+            
+            const Spacer(),
+            
+            // Confirm Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isValidPayment && paymentAmount > 0
+                    ? () => _confirmPayment(context, paymentAmount, change)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isValidPayment && paymentAmount > 0
+                      ? theme.colorScheme.primary
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Confirm Payment',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildPaymentStatus(ThemeData theme, double paymentAmount, double change, bool isValidPayment) {
+    if (isValidPayment) {
+      if (change > 0) {
+        return [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.withOpacity(0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Change:',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  '₱${change.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ];
+      } else {
+        return [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.withOpacity(0.5)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.blue, size: 24),
+                SizedBox(width: 12),
+                Text(
+                  'Exact payment',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ];
+      }
+    } else {
+      return [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red, size: 24),
+                  SizedBox(width: 12),
+                  Text(
+                    'Insufficient payment',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Need ₱${(_totalAmount - paymentAmount).toStringAsFixed(2)} more',
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+  }
+
+  void _confirmPayment(BuildContext context, double paymentAmount, double change) async {
+    final theme = Theme.of(context);
+    Navigator.pop(context); // Close payment screen
+    
+    // Show processing dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Processing payment...',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      // Store total amount before clearing cart
+      double totalAmount = widget.provider.cartTotal;
+      
+      // Complete the sale
+      await widget.provider.completeSale();
+      
+      // Close processing dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      
+      // Show success dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: theme.colorScheme.surface,
+            title: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Payment Successful!',
+                    style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: Container(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Total: ₱${totalAmount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Payment: ₱${paymentAmount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (change > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Change: ₱${change.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Text(
+                    'Transaction completed successfully!',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Date: ${DateTime.now().toString().split('.')[0]}',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontSize: 10,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sale completed successfully! 🎉'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Continue'),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Close processing dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: theme.colorScheme.surface,
+            title: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('Payment Failed', style: TextStyle(color: theme.colorScheme.onSurface)),
+              ],
+            ),
+            content: Text(
+              'Error: $e\n\nPlease try again.',
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK', style: TextStyle(color: theme.colorScheme.primary)),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 }

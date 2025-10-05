@@ -78,6 +78,8 @@ class Product {
 
   bool get isLowStock => (isCigarette || category == 'cigarettes') ? packStock <= reorderLevel : stock <= reorderLevel;
   
+  bool get isOutOfStock => (isCigarette || category == 'cigarettes') ? packStock <= 0 && _stickBuffer <= 0 : stock <= 0;
+  
   int get totalPieces => (isCigarette || category == 'cigarettes') ? (_stickBuffer + (packStock * (piecesPerPack ?? 20))) : stock;
   
   int get stickBuffer => _stickBuffer;
@@ -179,9 +181,10 @@ class Product {
   
   String get stockDisplay {
     if (isCigarette || category == 'cigarettes') {
+      if (isOutOfStock) return 'Out of Stock';
       return '${packStock} packs${_stickBuffer > 0 ? ' + ${_stickBuffer} sticks' : ''}';
     }
-    return stock.toString();
+    return isOutOfStock ? 'Out of Stock' : stock.toString();
   }
 }
 

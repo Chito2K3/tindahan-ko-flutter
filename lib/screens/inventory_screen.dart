@@ -58,10 +58,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
-                        title: 'Low Stock',
-                        value: '${provider.lowStockCount}',
-                        icon: '⚠️',
-                        isWarning: provider.lowStockCount > 0,
+                        title: 'Out of Stock',
+                        value: '${provider.outOfStockCount}',
+                        icon: '❌',
+                        isWarning: provider.outOfStockCount > 0,
                       ),
                     ),
                   ],
@@ -321,23 +321,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
   
   void _addProductWithBarcode(BuildContext context, String barcode) {
-    showDialog(
-      context: context,
-      builder: (context) => _ProductDialog(barcode: barcode),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _ProductDialog(barcode: barcode),
+        fullscreenDialog: true,
+      ),
     );
   }
 
   void _addProduct(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => _ProductDialog(),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _ProductDialog(),
+        fullscreenDialog: true,
+      ),
     );
   }
 
   void _editProduct(BuildContext context, Product product) {
-    showDialog(
-      context: context,
-      builder: (context) => _ProductDialog(product: product),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _ProductDialog(product: product),
+        fullscreenDialog: true,
+      ),
     );
   }
 
@@ -717,20 +723,33 @@ class _ProductDialogState extends State<_ProductDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Dialog(
-      backgroundColor: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
+    return Scaffold(
+      backgroundColor: theme.colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+        ),
+        title: Text(
+          widget.product == null ? 'Add Product' : 'Edit Product',
+          style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saveProduct,
+            child: Text(
+              widget.product == null ? 'Add' : 'Save',
+              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Text(
-              widget.product == null ? 'Add Product' : 'Edit Product',
-              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
             Expanded(
               child: Form(
                 key: _formKey,
@@ -1018,25 +1037,6 @@ class _ProductDialogState extends State<_ProductDialog> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: _saveProduct,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(widget.product == null ? 'Add' : 'Save'),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -1064,9 +1064,7 @@ class _ProductDialogState extends State<_ProductDialog> {
       isCigarette: _isCigarette,
       piecesPerPack: _isCigarette ? 20 : null,
       packPrice: _isCigarette ? double.parse(_packPriceController.text) : null,
-      loosePieces: _isCigarette ? int.parse(_stockController.text) % 20 : 0,
-      fullPacks: _isCigarette ? int.parse(_stockController.text) ~/ 20 : 0,
-      autoOpenPack: _isCigarette ? true : false,
+      packStock: _isCigarette ? int.parse(_stockController.text) : 0,
     );
 
     try {
