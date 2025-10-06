@@ -85,39 +85,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // Logo - POS Icon
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.transparent,
+                              ),
+                              child: Image.asset(
+                                'assets/images/POS_logo.png',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Text(
+                                    '🏪',
+                                    style: TextStyle(fontSize: 40),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Tindahan Ko Text - Bigger Font
                             Text(
                               'Tindahan Ko',
                               style: GoogleFonts.getFont(
                                 'Imperial Script',
-                                fontSize: 28,
+                                fontSize: 32,
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w600,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              'Para sa mga Reyna ng Tindahan',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                fontStyle: FontStyle.italic,
-                                fontFamily: 'Inter',
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              _storeName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              textAlign: TextAlign.center,
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Store Name - Below Logo, Bold and Emphasized
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            _storeName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ],
                     ),

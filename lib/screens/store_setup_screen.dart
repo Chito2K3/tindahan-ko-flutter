@@ -47,68 +47,105 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     children: [
                       const SizedBox(height: 40),
                   
-                  // Header with stylized logo
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withOpacity(0.2),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Tindahan Ko',
-                          style: GoogleFonts.getFont(
-                            'Imperial Script',
-                            fontSize: 48,
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              const Shadow(
-                                color: Colors.black26,
-                                offset: Offset(2, 2),
-                                blurRadius: 4,
+                      // Centered Header with Logo
+                      Center(
+                        child: Column(
+                          children: [
+                            // POS Logo
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
+                              child: Image.asset(
+                                'assets/images/POS_logo.png',
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Icon(
+                                      Icons.store,
+                                      size: 60,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // App Title
+                            Text(
+                              'Tindahan Ko',
+                              style: GoogleFonts.getFont(
+                                'Imperial Script',
+                                fontSize: 48,
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  const Shadow(
+                                    color: Colors.black26,
+                                    offset: Offset(2, 2),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // Subtitle
+                            Text(
+                              'Para sa mga Reyna ng Tindahan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                fontStyle: FontStyle.italic,
+                                fontFamily: 'Inter',
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 40),
+                            
+                            // Setup Title
+                            Text(
+                              'Setup Your Store',
+                              style: GoogleFonts.poppins(
+                                fontSize: 28,
+                                color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // Setup Description
+                            Text(
+                              'Enter your store information to get started',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Para sa mga Reyna ng Tindahan',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
-                            fontStyle: FontStyle.italic,
-                            fontFamily: 'Inter',
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  
-                  Text(
-                    'Setup Your Store',
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter your store information to get started',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                      ),
                   const SizedBox(height: 32),
                   
                   // Form Fields

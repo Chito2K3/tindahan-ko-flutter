@@ -186,7 +186,7 @@ class Product {
   String get stockDisplay {
     if (isCigarette || category == 'cigarettes') {
       if (isOutOfStock) return 'Out of Stock';
-      return '${packStock} packs${_stickBuffer > 0 ? ' + ${_stickBuffer} sticks' : ''}';
+      return '${packStock} packs + ${_stickBuffer} sticks';
     }
     return isOutOfStock ? 'Out of Stock' : stock.toString();
   }

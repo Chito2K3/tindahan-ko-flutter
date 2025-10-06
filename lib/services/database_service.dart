@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/product.dart';
 import '../models/sale.dart';
+
+// For web compatibility
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseService {
   static Database? _database;
@@ -21,6 +26,16 @@ class DatabaseService {
   }
 
   static Future<Database> _initDatabase() async {
+    // Initialize database factory for web
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+    } else if (defaultTargetPlatform == TargetPlatform.windows ||
+               defaultTargetPlatform == TargetPlatform.linux ||
+               defaultTargetPlatform == TargetPlatform.macOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+    
     String path = join(await getDatabasesPath(), _databaseName);
     return await openDatabase(
       path,
