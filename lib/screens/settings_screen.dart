@@ -703,7 +703,7 @@ class _AboutDialog extends StatelessWidget {
                       const Icon(Icons.verified, color: Colors.green, size: 16),
                       const SizedBox(width: 6),
                       Text(
-                        'Version 1.4.0',
+                        'Version 1.4.1',
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                       ),
                     ],
