@@ -12,7 +12,7 @@ def create_rounded_icon(image, size):
     rounded = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     
     # Resize the source image
-    resized = image.resize((size, size), Image.Resampling.LANCZOS)
+    with image.resize((size, size), Image.Resampling.LANCZOS) as resized:
     
     # Create a circular mask
     mask = Image.new('L', (size, size), 0)
@@ -46,32 +46,42 @@ def generate_android_icons(source_path):
         'mipmap-xxxhdpi': 432
     }
     
+    # Validate source path
+    if not os.path.isfile(source_path) or '..' in source_path:
+        raise ValueError("Invalid source path")
+    
     try:
         # Load the source image
-        source = Image.open(source_path).convert('RGBA')
+        with Image.open(source_path).convert('RGBA') as source:
         
         # Android res directory
         android_res = 'android/app/src/main/res'
         
-        # Generate regular launcher icons
-        for folder, size in sizes.items():
-            folder_path = os.path.join(android_res, folder)
-            os.makedirs(folder_path, exist_ok=True)
-            
-            # Create regular icon
-            icon = source.resize((size, size), Image.Resampling.LANCZOS)
-            icon.save(os.path.join(folder_path, 'ic_launcher.png'))
-            print(f"Generated {folder}/ic_launcher.png ({size}x{size})")
+            # Generate regular launcher icons
+            for folder, size in sizes.items():
+                folder_path = os.path.join(android_res, folder)
+                # Validate folder path
+                if '..' in folder_path:
+                    continue
+                os.makedirs(folder_path, exist_ok=True)
+                
+                # Create regular icon
+                with source.resize((size, size), Image.Resampling.LANCZOS) as icon:
+                    icon.save(os.path.join(folder_path, 'ic_launcher.png'))
+                print(f"Generated {folder}/ic_launcher.png ({size}x{size})")
         
-        # Generate foreground icons for adaptive icons
-        for folder, size in foreground_sizes.items():
-            folder_path = os.path.join(android_res, folder)
-            os.makedirs(folder_path, exist_ok=True)
-            
-            # Create foreground icon (larger for adaptive icons)
-            foreground = source.resize((size, size), Image.Resampling.LANCZOS)
-            foreground.save(os.path.join(folder_path, 'ic_launcher_foreground.png'))
-            print(f"Generated {folder}/ic_launcher_foreground.png ({size}x{size})")
+            # Generate foreground icons for adaptive icons
+            for folder, size in foreground_sizes.items():
+                folder_path = os.path.join(android_res, folder)
+                # Validate folder path
+                if '..' in folder_path:
+                    continue
+                os.makedirs(folder_path, exist_ok=True)
+                
+                # Create foreground icon (larger for adaptive icons)
+                with source.resize((size, size), Image.Resampling.LANCZOS) as foreground:
+                    foreground.save(os.path.join(folder_path, 'ic_launcher_foreground.png'))
+                print(f"Generated {folder}/ic_launcher_foreground.png ({size}x{size})")
         
         print("Android app icons generated successfully!")
         

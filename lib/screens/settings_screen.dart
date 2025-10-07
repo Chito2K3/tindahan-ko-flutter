@@ -13,6 +13,8 @@ import 'package:universal_html/html.dart' as html;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'package:file_picker/file_picker.dart' show PlatformFile;
+import 'package:permission_handler/permission_handler.dart';
 
 class SettingsScreen extends StatelessWidget {
   final VoidCallback? onStoreInfoUpdated;
@@ -473,74 +475,262 @@ class _BackupDialog extends StatelessWidget {
         final status = await Permission.storage.request();
         if (!status.isGranted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Storage permission required to import files'), backgroundColor: Colors.red),
+            const SnackBar(content: Text('Storage permission required'), backgroundColor: Colors.red),
           );
           return;
         }
       }
       
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        withData: true,
-        allowMultiple: false,
-        dialogTitle: 'Select Excel file to import',
+      // Show import method selection
+      final method = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Import Method', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.folder_open, color: Colors.blue),
+                title: Text('Browse Files', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                subtitle: Text('Use file picker', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                onTap: () => Navigator.pop(context, 'picker'),
+              ),
+              ListTile(
+                leading: Icon(Icons.download, color: Colors.green),
+                title: Text('From Downloads', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                subtitle: Text('Auto-find Excel files', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                onTap: () => Navigator.pop(context, 'downloads'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: Colors.blue)),
+            ),
+          ],
+        ),
       );
       
+      if (method == null) return;
+      
+      FilePickerResult? result;
+      
+      if (method == 'downloads') {
+        // Look for Excel files in Downloads folder
+        final downloadsPath = '/storage/emulated/0/Download';
+        final downloadsDir = Directory(downloadsPath);
+        
+        if (await downloadsDir.exists()) {
+          final files = await downloadsDir.list().where((file) => 
+            file.path.toLowerCase().endsWith('.xlsx')).toList();
+          
+          if (files.isEmpty) {
+            throw Exception('No Excel files found in Downloads folder');
+          }
+          
+          String? selectedFile;
+          if (files.length == 1) {
+            selectedFile = files.first.path;
+          } else {
+            selectedFile = await showDialog<String>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('Select Excel File'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: files.map((file) => ListTile(
+                    title: Text(path.basename(file.path)),
+                    onTap: () => Navigator.pop(context, file.path),
+                  )).toList(),
+                ),
+              ),
+            );
+          }
+          
+          if (selectedFile != null) {
+            final file = File(selectedFile);
+            final bytes = await file.readAsBytes();
+            result = FilePickerResult([PlatformFile(
+              name: path.basename(selectedFile),
+              size: bytes.length,
+              bytes: bytes,
+              path: selectedFile,
+            )]);
+          }
+        } else {
+          throw Exception('Downloads folder not accessible');
+        }
+      } else {
+        // Try file picker
+        try {
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.any,
+            withData: true,
+            allowMultiple: false,
+          );
+        } catch (e) {
+          throw Exception('File picker not supported. Please use "From Downloads" method.');
+        }
+      }
+      
       if (result != null && result.files.single.bytes != null) {
+        final fileName = result.files.single.name;
         final bytes = result.files.single.bytes!;
-        final excel = Excel.decodeBytes(bytes);
         
-        final sheet = excel.tables['Products'];
-        if (sheet == null) {
-          throw Exception('Invalid file: No "Products" sheet found. Please use a valid Tindahan Ko export file.');
-        }
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Checking file...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              ],
+            ),
+          ),
+        );
         
-        // Validate headers
-        if (sheet.maxRows < 2) {
-          throw Exception('Invalid file: File is empty or has no data.');
-        }
-        
-        final headers = sheet.rows[0];
-        final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
-        
-        for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
-          final headerValue = headers[i]?.value?.toString() ?? '';
-          if (headerValue != expectedHeaders[i]) {
-            throw Exception('Invalid file format: Expected "${expectedHeaders[i]}" in column ${String.fromCharCode(65 + i)}, found "$headerValue". Please use a valid Tindahan Ko export file.');
+        try {
+          // Validate file extension
+          if (!fileName.toLowerCase().endsWith('.xlsx')) {
+            Navigator.pop(context); // Close loading
+            throw Exception('Invalid file type. Only Excel files (.xlsx) are supported.');
           }
-        }
-        
-        final products = <Product>[];
-        
-        // Skip header row, start from row 1 (0-indexed)
-        for (int i = 1; i < sheet.maxRows; i++) {
-          final row = sheet.rows[i];
-          if (row.isEmpty || row[1]?.value == null) continue;
           
-          final id = row[0]?.value?.toString() ?? const Uuid().v4();
-          final name = row[1]?.value?.toString() ?? '';
-          final price = double.tryParse(row[2]?.value?.toString() ?? '0') ?? 0.0;
-          final stock = int.tryParse(row[3]?.value?.toString() ?? '0') ?? 0;
-          final category = row[4]?.value?.toString() ?? 'General';
-          final emoji = row[5]?.value?.toString() ?? '📦';
-          final reorderLevel = int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5;
-          final hasBarcode = row[7]?.value?.toString().toUpperCase() == 'YES';
-          final barcode = row[8]?.value?.toString();
-          
-          if (name.isNotEmpty) {
-            products.add(Product(
-              id: id,
-              name: name,
-              price: price,
-              stock: stock,
-              category: category,
-              emoji: emoji,
-              reorderLevel: reorderLevel,
-              hasBarcode: hasBarcode,
-              barcode: barcode?.isEmpty == true ? null : barcode,
-            ));
+          // Validate file size (max 10MB)
+          if (bytes.length > 10 * 1024 * 1024) {
+            Navigator.pop(context); // Close loading
+            throw Exception('File too large. Maximum size is 10MB.');
           }
+          
+          // Try to decode Excel file
+          Excel excel;
+          try {
+            excel = Excel.decodeBytes(bytes);
+          } catch (e) {
+            Navigator.pop(context); // Close loading
+            throw Exception('Invalid Excel file. File may be corrupted or not a valid Excel format.');
+          }
+        
+          // Validate sheet structure
+          final sheet = excel.tables['Products'];
+          if (sheet == null) {
+            Navigator.pop(context); // Close loading
+            throw Exception('Invalid file structure: No "Products" sheet found.\n\nPlease use a valid Tindahan Ko export file or create a sheet named "Products".');
+          }
+          
+          // Validate minimum rows
+          if (sheet.maxRows < 2) {
+            Navigator.pop(context); // Close loading
+            throw Exception('Invalid file: File is empty or contains no product data.\n\nThe file must have at least a header row and one product row.');
+          }
+          
+          // Validate headers
+          final headers = sheet.rows[0];
+          final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
+          
+          if (headers.length < expectedHeaders.length) {
+            Navigator.pop(context); // Close loading
+            throw Exception('Invalid file format: Missing columns.\n\nExpected ${expectedHeaders.length} columns, found ${headers.length}.\n\nRequired columns: ${expectedHeaders.join(", ")}');
+          }
+          
+          // Check each header
+          for (int i = 0; i < expectedHeaders.length; i++) {
+            final headerValue = headers[i]?.value?.toString().trim() ?? '';
+            if (headerValue != expectedHeaders[i]) {
+              Navigator.pop(context); // Close loading
+              throw Exception('Invalid column header in column ${String.fromCharCode(65 + i)}:\n\nExpected: "${expectedHeaders[i]}"\nFound: "$headerValue"\n\nPlease check your Excel file headers match exactly.');
+            }
+          }
+        
+          // Validate and parse products
+          final products = <Product>[];
+          final errors = <String>[];
+          
+          // Skip header row, start from row 1 (0-indexed)
+          for (int i = 1; i < sheet.maxRows; i++) {
+            final row = sheet.rows[i];
+            if (row.isEmpty || row[1]?.value == null) continue;
+            
+            try {
+              final name = row[1]?.value?.toString().trim() ?? '';
+              if (name.isEmpty) {
+                errors.add('Row ${i + 1}: Product name is required');
+                continue;
+              }
+              
+              final priceStr = row[2]?.value?.toString() ?? '0';
+              final price = double.tryParse(priceStr);
+              if (price == null || price < 0) {
+                errors.add('Row ${i + 1}: Invalid price "$priceStr". Must be a valid number ≥ 0');
+                continue;
+              }
+              
+              final stockStr = row[3]?.value?.toString() ?? '0';
+              final stock = int.tryParse(stockStr);
+              if (stock == null || stock < 0) {
+                errors.add('Row ${i + 1}: Invalid stock "$stockStr". Must be a valid number ≥ 0');
+                continue;
+              }
+              
+              final reorderStr = row[6]?.value?.toString() ?? '5';
+              final reorderLevel = int.tryParse(reorderStr);
+              if (reorderLevel == null || reorderLevel < 0) {
+                errors.add('Row ${i + 1}: Invalid reorder level "$reorderStr". Must be a valid number ≥ 0');
+                continue;
+              }
+              
+              final hasBarcodeStr = row[7]?.value?.toString().trim().toUpperCase() ?? 'NO';
+              if (!['YES', 'NO'].contains(hasBarcodeStr)) {
+                errors.add('Row ${i + 1}: Invalid barcode flag "$hasBarcodeStr". Must be "YES" or "NO"');
+                continue;
+              }
+              
+              final id = row[0]?.value?.toString().trim();
+              final category = row[4]?.value?.toString().trim();
+              final emoji = row[5]?.value?.toString().trim();
+              final barcode = row[8]?.value?.toString().trim();
+              
+              products.add(Product(
+                id: id?.isEmpty == true ? const Uuid().v4() : id!,
+                name: name,
+                price: price,
+                stock: stock,
+                category: category?.isEmpty == true ? 'General' : category!,
+                emoji: emoji?.isEmpty == true ? '📦' : emoji!,
+                reorderLevel: reorderLevel,
+                hasBarcode: hasBarcodeStr == 'YES',
+                barcode: barcode?.isEmpty == true ? null : barcode,
+              ));
+            } catch (e) {
+              errors.add('Row ${i + 1}: Error processing data - $e');
+            }
+          }
+          
+          Navigator.pop(context); // Close loading
+          
+          // Check for validation errors
+          if (errors.isNotEmpty) {
+            final errorMsg = errors.take(5).join('\n');
+            final moreErrors = errors.length > 5 ? '\n\n...and ${errors.length - 5} more errors' : '';
+            throw Exception('File validation failed:\n\n$errorMsg$moreErrors\n\nPlease fix these issues and try again.');
+          }
+        
+          if (products.isEmpty) {
+            throw Exception('No valid products found in the Excel file.\n\nPlease check that your file contains valid product data.');
+          }
+        } catch (e) {
+          // Make sure loading dialog is closed
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          rethrow;
         }
         
         if (products.isNotEmpty) {

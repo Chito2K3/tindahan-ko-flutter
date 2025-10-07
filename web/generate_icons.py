@@ -2,6 +2,10 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 def create_tk_icon(size, filename):
+    # Validate inputs
+    if '..' in filename or not isinstance(size, int) or size <= 0:
+        raise ValueError("Invalid parameters")
+    
     # Create image with gradient background
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -23,7 +27,7 @@ def create_tk_icon(size, filename):
     try:
         font_size = size // 2
         font = ImageFont.truetype("arial.ttf", font_size)
-    except:
+    except (OSError, IOError):
         font_size = size // 3
         font = ImageFont.load_default()
     
@@ -44,6 +48,8 @@ def create_tk_icon(size, filename):
     # Draw main text
     draw.text((x, y), text, fill=(255, 255, 255, 255), font=font)
     
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     img.save(filename)
     print(f"Created {filename}")
 
