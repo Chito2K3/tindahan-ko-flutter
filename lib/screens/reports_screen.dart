@@ -281,7 +281,14 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
   Widget _buildInventoryOverview(AppProvider provider, ThemeData theme) {
     final totalProducts = provider.products.length;
-    final totalValue = provider.products.fold<double>(0, (sum, p) => sum + (p.price * p.stock));
+    final totalValue = provider.products.fold<double>(0, (sum, p) {
+      if (p.isCigarette) {
+        final packValue = (p.packPrice ?? 0) * p.packStock;
+        final stickValue = p.price * p.stickBuffer;
+        return sum + packValue + stickValue;
+      }
+      return sum + (p.price * p.stock);
+    });
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -886,8 +893,8 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   
   String _getStockDisplay(Product product) {
     if (product.isCigarette || product.category == 'cigarettes') {
-      if (product.isOutOfStock) return '0 packs';
-      return '${product.packStock} pack${product.packStock != 1 ? 's' : ''}';
+      if (product.isOutOfStock) return '0 packs + 0 sticks';
+      return '${product.packStock} packs + ${product.stickBuffer} sticks';
     }
     return product.isOutOfStock ? '0' : '${product.stock}';
   }
@@ -1065,8 +1072,8 @@ class _StockResultsScreen extends StatelessWidget {
 
   String _getStockDisplay(Product product) {
     if (product.isCigarette || product.category == 'cigarettes') {
-      if (product.isOutOfStock) return '0 packs';
-      return '${product.packStock} pack${product.packStock != 1 ? 's' : ''}';
+      if (product.isOutOfStock) return '0 packs\n0 sticks';
+      return '${product.packStock} packs\n${product.stickBuffer} sticks';
     }
     return product.isOutOfStock ? '0' : '${product.stock}';
   }

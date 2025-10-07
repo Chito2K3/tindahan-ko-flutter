@@ -57,11 +57,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _StatCard(
-                        title: 'Out of Stock',
-                        value: '${provider.outOfStockCount}',
-                        icon: '❌',
-                        isWarning: provider.outOfStockCount > 0,
+                      child: _AddItemCard(
+                        onTap: () => _addProduct(context),
                       ),
                     ),
                   ],
@@ -164,7 +161,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 _searchQuery.isEmpty 
-                                    ? 'Add your first product using the + button'
+                                    ? 'Tap the + button above to add products'
                                     : 'Try a different search term',
                                 style: TextStyle(
                                   color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -187,15 +184,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                 ),
               ],
-            ),
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _addProduct(context),
-            backgroundColor: theme.colorScheme.primary,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Add Item',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         );
@@ -426,9 +414,9 @@ class _ProductCard extends StatelessWidget {
           children: [
             Text(
               product.emoji,
-              style: const TextStyle(fontSize: 32),
+              style: const TextStyle(fontSize: 40),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,46 +425,80 @@ class _ProductCard extends StatelessWidget {
                     product.name,
                     style: TextStyle(
                       color: theme.colorScheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     product.displayPrice,
                     style: TextStyle(
                       color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                  const SizedBox(height: 6),
+                  if (product.isCigarette)
+                    Text(
+                      product.stockDisplay,
+                      style: TextStyle(
+                        color: product.isLowStock ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Stock: ${product.stock}',
+                      style: TextStyle(
+                        color: product.isLowStock ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
+                          color: theme.colorScheme.surface.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           product.category,
                           style: TextStyle(
                             color: theme.colorScheme.onSurface.withOpacity(0.7),
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ),
-                      if (product.isBatchSelling) ...[
-                        const SizedBox(width: 8),
+                      if (product.isCigarette)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
                           ),
+                          child: const Text(
+                            'CIGARETTE',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      if (product.isBatchSelling)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.primary.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(6),
@@ -490,98 +512,34 @@ class _ProductCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      ],
-                      if (product.isCigarette) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'CIGARETTE',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (product.hasBarcode) ...[
-                        const SizedBox(width: 8),
+                      if (product.hasBarcode)
                         Icon(
                           Icons.qr_code,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                           size: 16,
                         ),
-                      ],
                     ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  product.isCigarette ? product.stockDisplay : '${product.stock}',
-                  style: TextStyle(
-                    color: product.isLowStock 
-                        ? Colors.red
-                        : theme.colorScheme.onSurface,
-                    fontSize: product.isCigarette ? 14 : 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Stock',
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
-                ),
-                if (product.isLowStock) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'LOW STOCK',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(width: 12),
-            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   onPressed: onEdit,
-                  icon: Icon(Icons.edit, color: theme.colorScheme.primary, size: 20),
+                  icon: Icon(Icons.edit, color: theme.colorScheme.primary, size: 22),
                   tooltip: 'Edit',
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
                 IconButton(
                   onPressed: onDelete,
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 22),
                   tooltip: 'Delete',
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
               ],
             ),
@@ -644,6 +602,66 @@ class _StatCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddItemCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddItemCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.2),
+              theme.colorScheme.primary.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.primary.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.add_circle,
+              size: 32,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'New Item',
+              style: TextStyle(
+                color: theme.colorScheme.primary.withOpacity(0.8),
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

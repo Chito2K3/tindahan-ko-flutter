@@ -327,6 +327,17 @@ class _BackupDialog extends StatelessWidget {
 
   Future<void> _exportData(BuildContext context) async {
     try {
+      // Request storage permission for Android
+      if (!kIsWeb && Platform.isAndroid) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Storage permission required to export files'), backgroundColor: Colors.red),
+          );
+          return;
+        }
+      }
+      
       final products = await DatabaseService.getAllProducts();
       
       // Create Excel file
@@ -378,31 +389,33 @@ class _BackupDialog extends StatelessWidget {
         anchor.remove();
         html.Url.revokeObjectUrl(url);
       } else {
-        // For Android/iOS - save to Downloads folder
+        // For Android - save to Downloads folder
+        String filePath;
         try {
-          final directory = await getExternalStorageDirectory();
-          if (directory != null) {
-            // Try to access Downloads folder
-            final downloadsPath = '/storage/emulated/0/Download';
-            final downloadsDir = Directory(downloadsPath);
-            if (await downloadsDir.exists()) {
-              final file = File(path.join(downloadsPath, fileName));
-              await file.writeAsBytes(bytes!);
-            } else {
-              // Fallback to app directory
-              final file = File(path.join(directory.path, fileName));
-              await file.writeAsBytes(bytes!);
-            }
+          // Try Downloads folder first (Android 10+)
+          final downloadsPath = '/storage/emulated/0/Download';
+          final downloadsDir = Directory(downloadsPath);
+          if (await downloadsDir.exists()) {
+            filePath = path.join(downloadsPath, fileName);
+          } else {
+            // Fallback for older Android versions
+            final directory = await getExternalStorageDirectory();
+            filePath = path.join(directory!.path, fileName);
           }
         } catch (e) {
-          // Fallback to app directory
+          // Final fallback
           final directory = await getApplicationDocumentsDirectory();
-          final file = File(path.join(directory.path, fileName));
-          await file.writeAsBytes(bytes!);
+          filePath = path.join(directory.path, fileName);
         }
+        
+        final file = File(filePath);
+        await file.writeAsBytes(bytes!);
       }
       
       Navigator.pop(context);
+      
+      final filePath = kIsWeb ? 'Downloads' : '/storage/emulated/0/Download';
+      
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -418,6 +431,8 @@ class _BackupDialog extends StatelessWidget {
               Text('${products.length} products exported', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               const SizedBox(height: 8),
               Text('File: $fileName', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
+              const SizedBox(height: 8),
+              Text('Location: $filePath', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 11)),
             ],
           ),
           actions: [
@@ -426,6 +441,19 @@ class _BackupDialog extends StatelessWidget {
               child: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
+        ),
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('File saved to Downloads: $fileName'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
         ),
       );
     } catch (e) {
@@ -440,11 +468,23 @@ class _BackupDialog extends StatelessWidget {
     try {
       Navigator.pop(context);
       
+      // Request storage permission for Android
+      if (!kIsWeb && Platform.isAndroid) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Storage permission required to import files'), backgroundColor: Colors.red),
+          );
+          return;
+        }
+      }
+      
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['xlsx', 'xls'],
+        allowedExtensions: ['xlsx'],
         withData: true,
         allowMultiple: false,
+        dialogTitle: 'Select Excel file to import',
       );
       
       if (result != null && result.files.single.bytes != null) {
@@ -453,7 +493,22 @@ class _BackupDialog extends StatelessWidget {
         
         final sheet = excel.tables['Products'];
         if (sheet == null) {
-          throw Exception('No "Products" sheet found in Excel file');
+          throw Exception('Invalid file: No "Products" sheet found. Please use a valid Tindahan Ko export file.');
+        }
+        
+        // Validate headers
+        if (sheet.maxRows < 2) {
+          throw Exception('Invalid file: File is empty or has no data.');
+        }
+        
+        final headers = sheet.rows[0];
+        final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
+        
+        for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
+          final headerValue = headers[i]?.value?.toString() ?? '';
+          if (headerValue != expectedHeaders[i]) {
+            throw Exception('Invalid file format: Expected "${expectedHeaders[i]}" in column ${String.fromCharCode(65 + i)}, found "$headerValue". Please use a valid Tindahan Ko export file.');
+          }
         }
         
         final products = <Product>[];
