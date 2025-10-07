@@ -2,14 +2,17 @@
 
 A complete POS and Inventory Management System for Sari-Sari stores, built with Flutter for native Android, iOS, and Web experience.
 
-## Latest Version: v1.4.0 🎉
+## Latest Version: v1.4.1 🎉
 
 ### ✨ New Features
-- **🚬 Dual-Unit Cigarette System** - Separate pack/piece inventory with smart deduction
-- **💰 Independent Pricing** - Different prices for packs and loose pieces
-- **🔧 Payment Processing Fix** - Resolved hanging "Processing payment..." dialog
-- **📊 Real Sales Data** - Actual transaction tracking in reports and analytics
-- **🗄️ Database v4** - Enhanced schema with cigarette support and auto-migration
+- **🎨 Improved Inventory UI** - Redesigned product cards with cleaner layout
+- **➕ Better Add Item Button** - Moved to top stats section, removed floating button
+- **📊 Enhanced Reports** - Fixed Total Value calculation including cigarette inventory
+- **🚬 Cigarette Stock Display** - Shows packs + loose sticks in Stock Lookup
+- **💾 Excel Export Fix** - Now saves to Downloads folder with proper notifications
+- **📁 File Manager Support** - Import works with all Android file managers
+- **✅ File Validation** - Only accepts valid Tindahan Ko Excel files
+- **📱 Android Compatibility** - Works on Android 6.0+ with proper permissions
 
 ## Core Features
 
@@ -38,16 +41,23 @@ A complete POS and Inventory Management System for Sari-Sari stores, built with 
 - SQLite database persistence
 - **Cigarette dual-unit system**: Track packs and loose pieces separately
 - **Smart inventory deduction**: Auto-opens packs when loose pieces run out
+- **Clean product cards**: Organized layout with single-line product names
+- **Add Item card**: Quick access button in top stats section
 
 ### 📊 Reports & Analytics
 - **Sales Report**: Daily/weekly sales charts, top-selling items
 - **Inventory Report**: Stock overview, low stock alerts, category stats
+- **Total Value**: Accurate calculation including all product inventory
+- **Stock Lookup**: Search with cigarette pack + stick display
 - Interactive charts using FL Chart library
 - Real-time data visualization
 
 ### 💾 Backup & Restore
-- **Excel Export**: Download products as .xlsx file
-- **Excel Import**: Upload modified Excel files
+- **Excel Export**: Saves to Downloads folder on Android
+- **Excel Import**: Works with all file managers
+- **File Validation**: Only accepts valid Tindahan Ko files
+- **Storage Permissions**: Compatible with Android 6.0+
+- **Notifications**: Shows file location after export
 - Manual data editing support
 - Data validation and confirmation dialogs
 
@@ -145,7 +155,19 @@ When exporting/importing data, the Excel file contains these columns:
 
 ## 📈 Version History
 
-### v1.4.0 (Latest) - Cigarette System & Payment Fix
+### v1.4.1 (Latest) - UI Improvements & Export/Import Fixes
+- ✅ Redesigned Inventory screen with cleaner product cards
+- ✅ Moved Add Item button to top stats section
+- ✅ Fixed Total Value calculation in Reports (includes all cigarette inventory)
+- ✅ Added loose sticks display in Stock Lookup for cigarettes
+- ✅ Fixed Excel export to save directly to Downloads folder
+- ✅ Added proper file notifications and location display
+- ✅ Enhanced Excel import with file validation
+- ✅ Added support for all Android file managers
+- ✅ Improved Android storage permissions (Android 6.0+)
+- ✅ Better error messages for invalid files
+
+### v1.4.0 - Cigarette System & Payment Fix
 - ✅ Dual-unit cigarette inventory (packs + pieces)
 - ✅ Separate pricing for packs and loose cigarettes
 - ✅ Smart inventory deduction with auto-pack opening
