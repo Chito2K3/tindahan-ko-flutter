@@ -26,110 +26,114 @@ class LandingScreen extends StatelessWidget {
               ),
             ),
             child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // App Logo
-                Column(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Tindahan Ko',
-                      style: GoogleFonts.getFont(
-                        'Imperial Script',
-                        fontSize: 64,
-                        color: theme.colorScheme.primary,
-                        shadows: [
-                          const Shadow(
-                            offset: Offset(2, 2),
-                            blurRadius: 4,
-                            color: Colors.black26,
+                    // App Logo
+                    Column(
+                      children: [
+                        Text(
+                          'Tindahan Ko',
+                          style: GoogleFonts.getFont(
+                            'Imperial Script',
+                            fontSize: 64,
+                            color: theme.colorScheme.primary,
+                            shadows: [
+                              const Shadow(
+                                offset: Offset(2, 2),
+                                blurRadius: 4,
+                                color: Colors.black26,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          'Para sa mga Reyna ng Tindahan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            fontStyle: FontStyle.italic,
+                            fontFamily: 'Inter',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          'Choggy Bear Mini Store',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 32),
+                    
+                    // Platform Selection
+                    Column(
+                      children: [
+                        Text(
+                          'Choose Platform:',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Android Button
+                        _PlatformButton(
+                          icon: '🤖',
+                          title: 'Android Version',
+                          subtitle: 'Native Android Experience',
+                          onTap: () => _navigateToApp(context, 'android'),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // iOS Button
+                        _PlatformButton(
+                          icon: '🍎',
+                          title: 'iOS Version',
+                          subtitle: 'Native iOS Experience',
+                          onTap: () => _navigateToApp(context, 'ios'),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Web Button
+                        _PlatformButton(
+                          icon: '🌐',
+                          title: 'Web Version',
+                          subtitle: 'Cross-platform Web App',
+                          isSecondary: true,
+                          onTap: () => _navigateToApp(context, 'web'),
+                        ),
+                      ],
+                    ),
+                    
+                    const Spacer(),
+                    
                     Text(
-                      'Para sa mga Reyna ng Tindahan',
-                      style: TextStyle(
-                        fontSize: 12,
+                      'Select your platform to experience the app!',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        fontStyle: FontStyle.italic,
-                        fontFamily: 'Inter',
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    Text(
-                      'Choggy Bear Mini Store',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    const SizedBox(height: 32),
                   ],
                 ),
-                const SizedBox(height: 32),
-                
-                // Platform Selection
-                Column(
-                  children: [
-                    Text(
-                      'Choose Platform:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Android Button
-                    _PlatformButton(
-                      icon: '🤖',
-                      title: 'Android Version',
-                      subtitle: 'Native Android Experience',
-                      onTap: () => _navigateToApp(context, 'android'),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // iOS Button
-                    _PlatformButton(
-                      icon: '🍎',
-                      title: 'iOS Version',
-                      subtitle: 'Native iOS Experience',
-                      onTap: () => _navigateToApp(context, 'ios'),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Web Button
-                    _PlatformButton(
-                      icon: '🌐',
-                      title: 'Web Version',
-                      subtitle: 'Cross-platform Web App',
-                      isSecondary: true,
-                      onTap: () => _navigateToApp(context, 'web'),
-                    ),
-                  ],
-                ),
-                
-                const Spacer(),
-                
-                Text(
-                  'Select your platform to experience the app!',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    );
       },
     );
   }

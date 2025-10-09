@@ -90,9 +90,10 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   bool _hasPermission = false;
   bool _isFlashOn = false;
   bool _showManualInput = false;
-  final Set<String> _scannedCodes = {};
+  final Map<String, DateTime> _scannedCodes = {};
   String? _lastScannedCode;
   DateTime? _lastScanTime;
+  static const Duration _scanCooldown = Duration(milliseconds: 1500);
   
   late AnimationController _scanLineController;
   late AnimationController _pulseController;
@@ -126,9 +127,11 @@ class _BarcodeScannerState extends State<BarcodeScanner>
 
     if (hasPermission) {
       _controller = MobileScannerController(
-        detectionSpeed: DetectionSpeed.noDuplicates,
+        detectionSpeed: DetectionSpeed.normal,
         facing: CameraFacing.back,
         torchEnabled: false,
+        returnImage: false,
+        detectionTimeoutMs: 1000,
       );
     }
   }
@@ -171,6 +174,8 @@ class _BarcodeScannerState extends State<BarcodeScanner>
               onPressed: () {
                 setState(() {
                   _scannedCodes.clear();
+                  _lastScannedCode = null;
+                  _lastScanTime = null;
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -285,9 +290,11 @@ class _BarcodeScannerState extends State<BarcodeScanner>
                 });
                 if (hasPermission) {
                   _controller = MobileScannerController(
-                    detectionSpeed: DetectionSpeed.noDuplicates,
+                    detectionSpeed: DetectionSpeed.normal,
                     facing: CameraFacing.back,
                     torchEnabled: false,
+                    returnImage: false,
+                    detectionTimeoutMs: 1000,
                   );
                 }
               },
@@ -363,8 +370,17 @@ class _BarcodeScannerState extends State<BarcodeScanner>
               keyboardType: TextInputType.number,
               autofocus: true,
               onSubmitted: (value) {
-                if (value.isNotEmpty) {
-                  _onBarcodeFound(value);
+                final normalized = _normalizeBarcode(value);
+                if (normalized.isNotEmpty && _isValidBarcode(normalized)) {
+                  _onBarcodeFound(normalized);
+                } else if (value.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invalid barcode format'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 }
               },
             ),
@@ -373,8 +389,17 @@ class _BarcodeScannerState extends State<BarcodeScanner>
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_textController.text.isNotEmpty) {
-                    _onBarcodeFound(_textController.text);
+                  final normalized = _normalizeBarcode(_textController.text);
+                  if (normalized.isNotEmpty && _isValidBarcode(normalized)) {
+                    _onBarcodeFound(normalized);
+                  } else if (_textController.text.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Invalid barcode format'),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -438,7 +463,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
             if (_scannedCodes.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Tap refresh (↻) to clear scanned history',
+                'Scanned ${_scannedCodes.length} barcode${_scannedCodes.length == 1 ? '' : 's'}. Tap refresh (↻) to clear history.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.8),
@@ -454,27 +479,83 @@ class _BarcodeScannerState extends State<BarcodeScanner>
   }
 
   void _onBarcodeDetected(BarcodeCapture capture) {
-    final barcode = capture.barcodes.firstOrNull;
-    if (barcode?.rawValue != null) {
-      _onBarcodeFound(barcode!.rawValue!);
+    try {
+      final barcode = capture.barcodes.firstOrNull;
+      if (barcode?.rawValue != null && barcode!.rawValue!.isNotEmpty) {
+        final rawValue = barcode.rawValue!;
+        debugPrint('Raw barcode detected: "$rawValue" (length: ${rawValue.length})');
+        
+        final normalizedBarcode = _normalizeBarcode(rawValue);
+        debugPrint('Normalized barcode: "$normalizedBarcode" (length: ${normalizedBarcode.length})');
+        
+        if (normalizedBarcode.isNotEmpty && _isValidBarcode(normalizedBarcode)) {
+          debugPrint('Valid barcode accepted: $normalizedBarcode');
+          _onBarcodeFound(normalizedBarcode);
+        } else {
+          debugPrint('Invalid barcode rejected: $normalizedBarcode');
+        }
+      }
+    } catch (e) {
+      debugPrint('Barcode detection error: $e');
     }
+  }
+  
+  String _normalizeBarcode(String barcode) {
+    try {
+      // Remove any whitespace and ensure it's not empty
+      final normalized = barcode.trim();
+      
+      // Basic validation - ensure it's not too short
+      if (normalized.length < 3) return '';
+      
+      // For most barcodes, keep alphanumeric characters and common barcode characters
+      final cleaned = normalized.replaceAll(RegExp(r'[^a-zA-Z0-9\-_.]'), '');
+      
+      return cleaned;
+    } catch (e) {
+      debugPrint('Barcode normalization error: $e');
+      return '';
+    }
+  }
+  
+  bool _isValidBarcode(String barcode) {
+    // Check if barcode meets basic criteria
+    if (barcode.length < 3 || barcode.length > 50) return false;
+    
+    // Ensure it's not just repeated characters (common scanning error)
+    if (RegExp(r'^(.)\1+$').hasMatch(barcode)) return false;
+    
+    // Ensure it has some alphanumeric content
+    if (!RegExp(r'[a-zA-Z0-9]').hasMatch(barcode)) return false;
+    
+    return true;
   }
 
   void _onBarcodeFound(String barcode) {
     if (!_isScanning) return;
     
-    // Check if this barcode was already scanned
-    if (_scannedCodes.contains(barcode)) {
+    final now = DateTime.now();
+    
+    // Check if this is the same barcode scanned recently (within cooldown period)
+    if (_lastScannedCode == barcode && 
+        _lastScanTime != null && 
+        now.difference(_lastScanTime!) < _scanCooldown) {
+      return; // Ignore rapid duplicate scans
+    }
+    
+    // Check if this barcode was already scanned (but allow after some time)
+    final lastScanTime = _scannedCodes[barcode];
+    if (lastScanTime != null && now.difference(lastScanTime) < const Duration(seconds: 3)) {
       _showAlreadyScannedMessage(barcode);
       return;
     }
     
-    // Add to scanned codes set
-    _scannedCodes.add(barcode);
+    // Add to scanned codes map with timestamp
+    _scannedCodes[barcode] = now;
     
     setState(() {
       _lastScannedCode = barcode;
-      _lastScanTime = DateTime.now();
+      _lastScanTime = now;
     });
     
     // Play beep sound and vibrate
@@ -534,7 +615,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
                         ),
                       ),
                       Text(
-                        barcode,
+                        'Code: $barcode',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -606,7 +687,7 @@ class _BarcodeScannerState extends State<BarcodeScanner>
                         ),
                       ),
                       Text(
-                        barcode,
+                        'Code: $barcode',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,

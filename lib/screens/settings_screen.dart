@@ -467,363 +467,424 @@ class _BackupDialog extends StatelessWidget {
   }
 
   Future<void> _importData(BuildContext context) async {
+    Navigator.pop(context); // Close backup dialog first
+    
     try {
-      Navigator.pop(context);
+      // Show file picker
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        withData: true,
+      );
       
-      // Request storage permission for Android
-      if (!kIsWeb && Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Storage permission required'), backgroundColor: Colors.red),
-          );
-          return;
-        }
+      if (result == null || result.files.isEmpty) {
+        return; // User cancelled
       }
       
-      // Show import method selection
-      final method = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text('Import Method', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.folder_open, color: Colors.blue),
-                title: Text('Browse Files', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                subtitle: Text('Use file picker', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-                onTap: () => Navigator.pop(context, 'picker'),
+      final file = result.files.first;
+      if (file.bytes == null) {
+        _showError(context, 'File Error', 'Could not read the selected file. Please try again.');
+        return;
+      }
+      
+      // Show progress dialog
+      _showProgressDialog(context, 'Reading Excel file...');
+      
+      await Future.delayed(const Duration(milliseconds: 500)); // Allow UI to update
+      
+      try {
+        // Validate file format
+        _updateProgress(context, 'Validating file format...');
+        final excel = Excel.decodeBytes(file.bytes!);
+        final sheet = excel.tables['Products'];
+        
+        if (sheet == null) {
+          _closeProgress(context);
+          _showError(context, 'Invalid File Format', 
+            'This file is not a valid Tindahan Ko Excel file.\n\n'
+            'Expected: Excel file with "Products" sheet\n'
+            'Please export from Tindahan Ko first to get the correct format.');
+          return;
+        }
+        
+        if (sheet.maxRows < 2) {
+          _closeProgress(context);
+          _showError(context, 'Empty File', 'The Excel file contains no product data.\n\nPlease check your file and try again.');
+          return;
+        }
+        
+        // Validate headers
+        _updateProgress(context, 'Checking file structure...');
+        final headers = sheet.rows[0];
+        final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
+        
+        final List<String> missingHeaders = [];
+        for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
+          final headerValue = headers[i]?.value?.toString().trim() ?? '';
+          if (headerValue != expectedHeaders[i]) {
+            missingHeaders.add('Column ${String.fromCharCode(65 + i)}: Expected "${expectedHeaders[i]}", found "$headerValue"');
+          }
+        }
+        
+        if (missingHeaders.isNotEmpty) {
+          _closeProgress(context);
+          _showError(context, 'Invalid File Structure', 
+            'The Excel file structure doesn\'t match Tindahan Ko format:\n\n'
+            '${missingHeaders.join('\n')}\n\n'
+            'Please use a file exported from Tindahan Ko.');
+          return;
+        }
+        
+        // Parse and validate products
+        _updateProgress(context, 'Processing products...');
+        final products = <Product>[];
+        final errors = <String>[];
+        
+        for (int i = 1; i < sheet.maxRows; i++) {
+          final row = sheet.rows[i];
+          if (row.isEmpty || (row.length > 1 && row[1]?.value?.toString().trim().isEmpty == true)) {
+            continue; // Skip empty rows
+          }
+          
+          try {
+            final name = row[1]?.value?.toString().trim() ?? '';
+            final priceStr = row[2]?.value?.toString() ?? '0';
+            final stockStr = row[3]?.value?.toString() ?? '0';
+            
+            if (name.isEmpty) {
+              errors.add('Row ${i + 1}: Product name is required');
+              continue;
+            }
+            
+            final price = double.tryParse(priceStr);
+            if (price == null || price < 0) {
+              errors.add('Row ${i + 1}: Invalid price "$priceStr"');
+              continue;
+            }
+            
+            final stock = int.tryParse(stockStr);
+            if (stock == null || stock < 0) {
+              errors.add('Row ${i + 1}: Invalid stock "$stockStr"');
+              continue;
+            }
+            
+            final product = Product(
+              id: row[0]?.value?.toString().trim() ?? const Uuid().v4(),
+              name: name,
+              price: price,
+              stock: stock,
+              category: row[4]?.value?.toString().trim() ?? 'general',
+              emoji: row[5]?.value?.toString().trim() ?? '📦',
+              reorderLevel: int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5,
+              hasBarcode: row[7]?.value?.toString().trim().toUpperCase() == 'YES',
+              barcode: row[8]?.value?.toString().trim().isEmpty == true ? null : row[8]?.value?.toString().trim(),
+            );
+            
+            products.add(product);
+          } catch (e) {
+            errors.add('Row ${i + 1}: $e');
+          }
+        }
+        
+        _closeProgress(context);
+        
+        // Show validation results
+        if (products.isEmpty) {
+          String errorMsg = 'No valid products found in the Excel file.';
+          if (errors.isNotEmpty) {
+            errorMsg += '\n\nErrors found:\n${errors.take(5).join('\n')}';
+            if (errors.length > 5) {
+              errorMsg += '\n... and ${errors.length - 5} more errors';
+            }
+          }
+          _showError(context, 'No Valid Data', errorMsg);
+          return;
+        }
+        
+        // Show confirmation with details
+        final confirmed = await _showConfirmDialog(context, products.length, errors.length);
+        if (!confirmed) return;
+        
+        // Import products with progress
+        _showProgressDialog(context, 'Importing products...');
+        
+        // Clear existing products
+        _updateProgress(context, 'Clearing existing data...');
+        final existingProducts = await DatabaseService.getAllProducts();
+        for (int i = 0; i < existingProducts.length; i++) {
+          await DatabaseService.deleteProduct(existingProducts[i].id);
+          if (i % 10 == 0) {
+            _updateProgress(context, 'Clearing existing data... ${i + 1}/${existingProducts.length}');
+            await Future.delayed(const Duration(milliseconds: 10));
+          }
+        }
+        
+        // Insert new products
+        for (int i = 0; i < products.length; i++) {
+          await DatabaseService.insertProduct(products[i]);
+          if (i % 5 == 0) {
+            _updateProgress(context, 'Importing products... ${i + 1}/${products.length}');
+            await Future.delayed(const Duration(milliseconds: 10));
+          }
+        }
+        
+        // Refresh app data
+        _updateProgress(context, 'Refreshing data...');
+        if (context.mounted) {
+          await Provider.of<AppProvider>(context, listen: false).loadProducts();
+        }
+        
+        _closeProgress(context);
+        _showSuccess(context, products.length, errors.length);
+        
+      } catch (e) {
+        _closeProgress(context);
+        _showError(context, 'Import Failed', 
+          'An error occurred while processing the Excel file:\n\n$e\n\n'
+          'Please check your file format and try again.');
+      }
+      
+    } catch (e) {
+      _showError(context, 'File Selection Error', 
+        'Could not open the file picker:\n\n$e\n\n'
+        'Please check your device permissions and try again.');
+    }
+  }
+  
+  void _showProgressDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 16,
               ),
-              ListTile(
-                leading: Icon(Icons.download, color: Colors.green),
-                title: Text('From Downloads', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                subtitle: Text('Auto-find Excel files', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-                onTap: () => Navigator.pop(context, 'downloads'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please wait...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 12,
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: Colors.blue)),
             ),
           ],
         ),
-      );
-      
-      if (method == null) return;
-      
-      FilePickerResult? result;
-      
-      if (method == 'downloads') {
-        // Look for Excel files in Downloads folder
-        final downloadsPath = '/storage/emulated/0/Download';
-        final downloadsDir = Directory(downloadsPath);
-        
-        if (await downloadsDir.exists()) {
-          final files = await downloadsDir.list().where((file) => 
-            file.path.toLowerCase().endsWith('.xlsx')).toList();
-          
-          if (files.isEmpty) {
-            throw Exception('No Excel files found in Downloads folder');
-          }
-          
-          String? selectedFile;
-          if (files.length == 1) {
-            selectedFile = files.first.path;
-          } else {
-            selectedFile = await showDialog<String>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Select Excel File'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: files.map((file) => ListTile(
-                    title: Text(path.basename(file.path)),
-                    onTap: () => Navigator.pop(context, file.path),
-                  )).toList(),
-                ),
+      ),
+    );
+  }
+  
+  void _updateProgress(BuildContext context, String message) {
+    // Close current dialog and show new one with updated message
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+    _showProgressDialog(context, message);
+  }
+  
+  void _closeProgress(BuildContext context) {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
+  
+  void _showError(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(color: Colors.red)),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<bool> _showConfirmDialog(BuildContext context, int productCount, int errorCount) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Row(
+          children: [
+            Icon(Icons.upload_file, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Confirm Import', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.warning_amber, color: Colors.orange, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Ready to import $productCount products',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-            );
-          }
-          
-          if (selectedFile != null) {
-            final file = File(selectedFile);
-            final bytes = await file.readAsBytes();
-            result = FilePickerResult([PlatformFile(
-              name: path.basename(selectedFile),
-              size: bytes.length,
-              bytes: bytes,
-              path: selectedFile,
-            )]);
-          }
-        } else {
-          throw Exception('Downloads folder not accessible');
-        }
-      } else {
-        // Try file picker
-        try {
-          result = await FilePicker.platform.pickFiles(
-            type: FileType.any,
-            withData: true,
-            allowMultiple: false,
-          );
-        } catch (e) {
-          throw Exception('File picker not supported. Please use "From Downloads" method.');
-        }
-      }
-      
-      if (result != null && result.files.single.bytes != null) {
-        final fileName = result.files.single.name;
-        final bytes = result.files.single.bytes!;
-        
-        // Show loading dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text('Checking file...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              ],
+            ),
+            if (errorCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '$errorCount rows had errors and will be skipped',
+                style: const TextStyle(color: Colors.orange, fontSize: 14),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.red, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will replace ALL existing products',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
             ),
           ),
-        );
-        
-        try {
-          // Validate file extension
-          if (!fileName.toLowerCase().endsWith('.xlsx')) {
-            Navigator.pop(context); // Close loading
-            throw Exception('Invalid file type. Only Excel files (.xlsx) are supported.');
-          }
-          
-          // Validate file size (max 10MB)
-          if (bytes.length > 10 * 1024 * 1024) {
-            Navigator.pop(context); // Close loading
-            throw Exception('File too large. Maximum size is 10MB.');
-          }
-          
-          // Try to decode Excel file
-          Excel excel;
-          try {
-            excel = Excel.decodeBytes(bytes);
-          } catch (e) {
-            Navigator.pop(context); // Close loading
-            throw Exception('Invalid Excel file. File may be corrupted or not a valid Excel format.');
-          }
-        
-          // Validate sheet structure
-          final sheet = excel.tables['Products'];
-          if (sheet == null) {
-            Navigator.pop(context); // Close loading
-            throw Exception('Invalid file structure: No "Products" sheet found.\n\nPlease use a valid Tindahan Ko export file or create a sheet named "Products".');
-          }
-          
-          // Validate minimum rows
-          if (sheet.maxRows < 2) {
-            Navigator.pop(context); // Close loading
-            throw Exception('Invalid file: File is empty or contains no product data.\n\nThe file must have at least a header row and one product row.');
-          }
-          
-          // Validate headers
-          final headers = sheet.rows[0];
-          final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
-          
-          if (headers.length < expectedHeaders.length) {
-            Navigator.pop(context); // Close loading
-            throw Exception('Invalid file format: Missing columns.\n\nExpected ${expectedHeaders.length} columns, found ${headers.length}.\n\nRequired columns: ${expectedHeaders.join(", ")}');
-          }
-          
-          // Check each header
-          for (int i = 0; i < expectedHeaders.length; i++) {
-            final headerValue = headers[i]?.value?.toString().trim() ?? '';
-            if (headerValue != expectedHeaders[i]) {
-              Navigator.pop(context); // Close loading
-              throw Exception('Invalid column header in column ${String.fromCharCode(65 + i)}:\n\nExpected: "${expectedHeaders[i]}"\nFound: "$headerValue"\n\nPlease check your Excel file headers match exactly.');
-            }
-          }
-        
-          // Validate and parse products
-          final products = <Product>[];
-          final errors = <String>[];
-          
-          // Skip header row, start from row 1 (0-indexed)
-          for (int i = 1; i < sheet.maxRows; i++) {
-            final row = sheet.rows[i];
-            if (row.isEmpty || row[1]?.value == null) continue;
-            
-            try {
-              final name = row[1]?.value?.toString().trim() ?? '';
-              if (name.isEmpty) {
-                errors.add('Row ${i + 1}: Product name is required');
-                continue;
-              }
-              
-              final priceStr = row[2]?.value?.toString() ?? '0';
-              final price = double.tryParse(priceStr);
-              if (price == null || price < 0) {
-                errors.add('Row ${i + 1}: Invalid price "$priceStr". Must be a valid number ≥ 0');
-                continue;
-              }
-              
-              final stockStr = row[3]?.value?.toString() ?? '0';
-              final stock = int.tryParse(stockStr);
-              if (stock == null || stock < 0) {
-                errors.add('Row ${i + 1}: Invalid stock "$stockStr". Must be a valid number ≥ 0');
-                continue;
-              }
-              
-              final reorderStr = row[6]?.value?.toString() ?? '5';
-              final reorderLevel = int.tryParse(reorderStr);
-              if (reorderLevel == null || reorderLevel < 0) {
-                errors.add('Row ${i + 1}: Invalid reorder level "$reorderStr". Must be a valid number ≥ 0');
-                continue;
-              }
-              
-              final hasBarcodeStr = row[7]?.value?.toString().trim().toUpperCase() ?? 'NO';
-              if (!['YES', 'NO'].contains(hasBarcodeStr)) {
-                errors.add('Row ${i + 1}: Invalid barcode flag "$hasBarcodeStr". Must be "YES" or "NO"');
-                continue;
-              }
-              
-              final id = row[0]?.value?.toString().trim();
-              final category = row[4]?.value?.toString().trim();
-              final emoji = row[5]?.value?.toString().trim();
-              final barcode = row[8]?.value?.toString().trim();
-              
-              products.add(Product(
-                id: id?.isEmpty == true ? const Uuid().v4() : id!,
-                name: name,
-                price: price,
-                stock: stock,
-                category: category?.isEmpty == true ? 'General' : category!,
-                emoji: emoji?.isEmpty == true ? '📦' : emoji!,
-                reorderLevel: reorderLevel,
-                hasBarcode: hasBarcodeStr == 'YES',
-                barcode: barcode?.isEmpty == true ? null : barcode,
-              ));
-            } catch (e) {
-              errors.add('Row ${i + 1}: Error processing data - $e');
-            }
-          }
-          
-          Navigator.pop(context); // Close loading
-          
-          // Check for validation errors
-          if (errors.isNotEmpty) {
-            final errorMsg = errors.take(5).join('\n');
-            final moreErrors = errors.length > 5 ? '\n\n...and ${errors.length - 5} more errors' : '';
-            throw Exception('File validation failed:\n\n$errorMsg$moreErrors\n\nPlease fix these issues and try again.');
-          }
-        
-          if (products.isEmpty) {
-            throw Exception('No valid products found in the Excel file.\n\nPlease check that your file contains valid product data.');
-          }
-        } catch (e) {
-          // Make sure loading dialog is closed
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          rethrow;
-        }
-        
-        if (products.isNotEmpty) {
-          // Show confirmation dialog
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              title: Text('Confirm Import', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.warning, color: Colors.orange, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Found ${products.length} products to import.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'This will replace all existing products. Continue?',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text('Import', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                ),
-              ],
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-          );
-          
-          if (confirmed == true) {
-            // Clear existing products and import new ones
-            final existingProducts = await DatabaseService.getAllProducts();
-            for (final product in existingProducts) {
-              await DatabaseService.deleteProduct(product.id);
-            }
-            
-            for (final product in products) {
-              await DatabaseService.insertProduct(product);
-            }
-            
-            // Refresh provider
-            if (context.mounted) {
-              await Provider.of<AppProvider>(context, listen: false).loadProducts();
-            }
-            
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                title: Text('Import Successful', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 48),
-                    const SizedBox(height: 16),
+            child: const Text('Import Now', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+  
+  void _showSuccess(BuildContext context, int productCount, int errorCount) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Import Successful', style: TextStyle(color: Colors.green)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_done, color: Colors.green, size: 64),
+            const SizedBox(height: 20),
+            Text(
+              '$productCount products imported successfully!',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.inventory, color: Colors.green, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Database updated successfully',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (errorCount > 0) ...[
+                    const SizedBox(height: 8),
                     Text(
-                      '${products.length} products imported successfully!',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                      textAlign: TextAlign.center,
+                      '$errorCount rows were skipped due to errors',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                  ),
                 ],
               ),
-            );
-          }
-        } else {
-          throw Exception('No valid products found in Excel file');
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Import failed: $e'),
-          backgroundColor: Colors.red,
+            ),
+          ],
         ),
-      );
-    }
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Done', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    
+    // Also show snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ $productCount products imported successfully'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 }
 

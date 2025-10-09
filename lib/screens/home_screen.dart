@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Logo - POS Icon
+                            // Logo - POS Icon (Theme-based)
                             Container(
                               width: 50,
                               height: 50,
@@ -99,7 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.transparent,
                               ),
                               child: Image.asset(
-                                'assets/images/POS_logo.png',
+                                themeProvider.isDarkMode 
+                                    ? 'assets/images/POS_logo_dark.png'
+                                    : 'assets/images/POS_logo_light.png',
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.contain,
