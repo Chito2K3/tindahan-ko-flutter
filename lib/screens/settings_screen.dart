@@ -13,8 +13,9 @@ import 'package:universal_html/html.dart' as html;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:file_picker/file_picker.dart' show PlatformFile;
+import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 
 class SettingsScreen extends StatelessWidget {
   final VoidCallback? onStoreInfoUpdated;
@@ -469,288 +470,341 @@ class _BackupDialog extends StatelessWidget {
   Future<void> _importData(BuildContext context) async {
     Navigator.pop(context); // Close backup dialog first
     
+    // Show the import wizard
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const _ImportWizard(),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
+}
+
+class _ImportWizard extends StatefulWidget {
+  const _ImportWizard();
+  
+  @override
+  State<_ImportWizard> createState() => _ImportWizardState();
+}
+
+class _ImportWizardState extends State<_ImportWizard> {
+  ImportState _currentState = ImportState.selecting;
+  String _statusMessage = 'Select Excel file';
+  int _productCount = 0;
+  int _errorCount = 0;
+  List<Product> _products = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _startImport();
+  }
+  
+  Future<void> _startImport() async {
     try {
-      // Show file picker
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        withData: true,
-      );
+      // Check and request permissions only if needed
+      if (!kIsWeb && Platform.isAndroid) {
+        final storageStatus = await Permission.storage.status;
+        final manageStorageStatus = await Permission.manageExternalStorage.status;
+        
+        if (!storageStatus.isGranted && !manageStorageStatus.isGranted) {
+          setState(() {
+            _statusMessage = 'Requesting storage permission...';
+          });
+          
+          final storageResult = await Permission.storage.request();
+          final manageStorageResult = await Permission.manageExternalStorage.request();
+          
+          if (!storageResult.isGranted && !manageStorageResult.isGranted) {
+            _showError('Storage permission required to access files');
+            return;
+          }
+        }
+      }
+      
+      // File selection
+      setState(() {
+        _statusMessage = 'Opening file manager...';
+      });
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      FilePickerResult? result;
+      if (!kIsWeb && Platform.isAndroid) {
+        // Force file manager on Android by using FileType.any
+        // This bypasses the system picker and opens file manager directly
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any, // This forces file manager instead of system picker
+          allowMultiple: false,
+          withData: true,
+          dialogTitle: 'Select Excel File from File Manager',
+        );
+        
+        // Validate file type after selection
+        if (result != null && result.files.isNotEmpty) {
+          final fileName = result.files.first.name.toLowerCase();
+          if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+            _showError('Invalid file type\n\nPlease select an Excel file (.xlsx or .xls)\n\nYou selected: ${result.files.first.name}');
+            return;
+          }
+        }
+      } else {
+        // Use normal file picker for web and iOS
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['xlsx'],
+          withData: true,
+        );
+      }
       
       if (result == null || result.files.isEmpty) {
-        return; // User cancelled
+        Navigator.pop(context);
+        return;
       }
       
       final file = result.files.first;
       if (file.bytes == null) {
-        _showError(context, 'File Error', 'Could not read the selected file. Please try again.');
+        _showError('Could not read file');
         return;
       }
       
-      // Show progress dialog
-      _showProgressDialog(context, 'Reading Excel file...');
-      
-      await Future.delayed(const Duration(milliseconds: 500)); // Allow UI to update
-      
-      try {
-        // Validate file format
-        _updateProgress(context, 'Validating file format...');
-        final excel = Excel.decodeBytes(file.bytes!);
-        final sheet = excel.tables['Products'];
-        
-        if (sheet == null) {
-          _closeProgress(context);
-          _showError(context, 'Invalid File Format', 
-            'This file is not a valid Tindahan Ko Excel file.\n\n'
-            'Expected: Excel file with "Products" sheet\n'
-            'Please export from Tindahan Ko first to get the correct format.');
-          return;
-        }
-        
-        if (sheet.maxRows < 2) {
-          _closeProgress(context);
-          _showError(context, 'Empty File', 'The Excel file contains no product data.\n\nPlease check your file and try again.');
-          return;
-        }
-        
-        // Validate headers
-        _updateProgress(context, 'Checking file structure...');
-        final headers = sheet.rows[0];
-        final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
-        
-        final List<String> missingHeaders = [];
-        for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
-          final headerValue = headers[i]?.value?.toString().trim() ?? '';
-          if (headerValue != expectedHeaders[i]) {
-            missingHeaders.add('Column ${String.fromCharCode(65 + i)}: Expected "${expectedHeaders[i]}", found "$headerValue"');
-          }
-        }
-        
-        if (missingHeaders.isNotEmpty) {
-          _closeProgress(context);
-          _showError(context, 'Invalid File Structure', 
-            'The Excel file structure doesn\'t match Tindahan Ko format:\n\n'
-            '${missingHeaders.join('\n')}\n\n'
-            'Please use a file exported from Tindahan Ko.');
-          return;
-        }
-        
-        // Parse and validate products
-        _updateProgress(context, 'Processing products...');
-        final products = <Product>[];
-        final errors = <String>[];
-        
-        for (int i = 1; i < sheet.maxRows; i++) {
-          final row = sheet.rows[i];
-          if (row.isEmpty || (row.length > 1 && row[1]?.value?.toString().trim().isEmpty == true)) {
-            continue; // Skip empty rows
-          }
-          
-          try {
-            final name = row[1]?.value?.toString().trim() ?? '';
-            final priceStr = row[2]?.value?.toString() ?? '0';
-            final stockStr = row[3]?.value?.toString() ?? '0';
-            
-            if (name.isEmpty) {
-              errors.add('Row ${i + 1}: Product name is required');
-              continue;
-            }
-            
-            final price = double.tryParse(priceStr);
-            if (price == null || price < 0) {
-              errors.add('Row ${i + 1}: Invalid price "$priceStr"');
-              continue;
-            }
-            
-            final stock = int.tryParse(stockStr);
-            if (stock == null || stock < 0) {
-              errors.add('Row ${i + 1}: Invalid stock "$stockStr"');
-              continue;
-            }
-            
-            final product = Product(
-              id: row[0]?.value?.toString().trim() ?? const Uuid().v4(),
-              name: name,
-              price: price,
-              stock: stock,
-              category: row[4]?.value?.toString().trim() ?? 'general',
-              emoji: row[5]?.value?.toString().trim() ?? '📦',
-              reorderLevel: int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5,
-              hasBarcode: row[7]?.value?.toString().trim().toUpperCase() == 'YES',
-              barcode: row[8]?.value?.toString().trim().isEmpty == true ? null : row[8]?.value?.toString().trim(),
-            );
-            
-            products.add(product);
-          } catch (e) {
-            errors.add('Row ${i + 1}: $e');
-          }
-        }
-        
-        _closeProgress(context);
-        
-        // Show validation results
-        if (products.isEmpty) {
-          String errorMsg = 'No valid products found in the Excel file.';
-          if (errors.isNotEmpty) {
-            errorMsg += '\n\nErrors found:\n${errors.take(5).join('\n')}';
-            if (errors.length > 5) {
-              errorMsg += '\n... and ${errors.length - 5} more errors';
-            }
-          }
-          _showError(context, 'No Valid Data', errorMsg);
-          return;
-        }
-        
-        // Show confirmation with details
-        final confirmed = await _showConfirmDialog(context, products.length, errors.length);
-        if (!confirmed) return;
-        
-        // Import products with progress
-        _showProgressDialog(context, 'Importing products...');
-        
-        // Clear existing products
-        _updateProgress(context, 'Clearing existing data...');
-        final existingProducts = await DatabaseService.getAllProducts();
-        for (int i = 0; i < existingProducts.length; i++) {
-          await DatabaseService.deleteProduct(existingProducts[i].id);
-          if (i % 10 == 0) {
-            _updateProgress(context, 'Clearing existing data... ${i + 1}/${existingProducts.length}');
-            await Future.delayed(const Duration(milliseconds: 10));
-          }
-        }
-        
-        // Insert new products
-        for (int i = 0; i < products.length; i++) {
-          await DatabaseService.insertProduct(products[i]);
-          if (i % 5 == 0) {
-            _updateProgress(context, 'Importing products... ${i + 1}/${products.length}');
-            await Future.delayed(const Duration(milliseconds: 10));
-          }
-        }
-        
-        // Refresh app data
-        _updateProgress(context, 'Refreshing data...');
-        if (context.mounted) {
-          await Provider.of<AppProvider>(context, listen: false).loadProducts();
-        }
-        
-        _closeProgress(context);
-        _showSuccess(context, products.length, errors.length);
-        
-      } catch (e) {
-        _closeProgress(context);
-        _showError(context, 'Import Failed', 
-          'An error occurred while processing the Excel file:\n\n$e\n\n'
-          'Please check your file format and try again.');
-      }
+      await _processFile(file.bytes!);
       
     } catch (e) {
-      _showError(context, 'File Selection Error', 
-        'Could not open the file picker:\n\n$e\n\n'
-        'Please check your device permissions and try again.');
+      _showError('File selection failed: $e');
     }
   }
   
-  void _showProgressDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
+  Future<void> _processFile(List<int> bytes) async {
+    try {
+      // Validation
+      setState(() {
+        _currentState = ImportState.validating;
+        _statusMessage = 'Validating Excel file...';
+      });
+      await Future.delayed(const Duration(milliseconds: 800));
+      
+      final excel = Excel.decodeBytes(bytes);
+      final sheet = excel.tables['Products'];
+      
+      if (sheet == null) {
+        _showError('No "Products" sheet found');
+        return;
+      }
+      
+      if (sheet.maxRows < 2) {
+        _showError('Excel file is empty');
+        return;
+      }
+      
+      // Header validation
+      setState(() => _statusMessage = 'Checking file structure...');
+      await Future.delayed(const Duration(milliseconds: 600));
+      
+      final headers = sheet.rows[0];
+      final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
+      
+      for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
+        final headerValue = headers[i]?.value?.toString().trim() ?? '';
+        if (headerValue != expectedHeaders[i]) {
+          _showError('Invalid header in column ${String.fromCharCode(65 + i)}: Expected "${expectedHeaders[i]}", found "$headerValue"');
+          return;
+        }
+      }
+      
+      // Parse products
+      setState(() => _statusMessage = 'Processing products...');
+      await Future.delayed(const Duration(milliseconds: 600));
+      
+      final products = <Product>[];
+      final errors = <String>[];
+      
+      for (int i = 1; i < sheet.maxRows; i++) {
+        final row = sheet.rows[i];
+        if (row.isEmpty || (row.length > 1 && row[1]?.value?.toString().trim().isEmpty == true)) {
+          continue;
+        }
+        
+        try {
+          final name = row[1]?.value?.toString().trim() ?? '';
+          final priceStr = row[2]?.value?.toString() ?? '0';
+          final stockStr = row[3]?.value?.toString() ?? '0';
+          
+          if (name.isEmpty) {
+            errors.add('Row ${i + 1}: Product name required');
+            continue;
+          }
+          
+          final price = double.tryParse(priceStr);
+          if (price == null || price < 0) {
+            errors.add('Row ${i + 1}: Invalid price');
+            continue;
+          }
+          
+          final stock = int.tryParse(stockStr);
+          if (stock == null || stock < 0) {
+            errors.add('Row ${i + 1}: Invalid stock');
+            continue;
+          }
+          
+          final product = Product(
+            id: row[0]?.value?.toString().trim() ?? const Uuid().v4(),
+            name: name,
+            price: price,
+            stock: stock,
+            category: row[4]?.value?.toString().trim() ?? 'general',
+            emoji: row[5]?.value?.toString().trim() ?? '📦',
+            reorderLevel: int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5,
+            hasBarcode: row[7]?.value?.toString().trim().toUpperCase() == 'YES',
+            barcode: row[8]?.value?.toString().trim().isEmpty == true ? null : row[8]?.value?.toString().trim(),
+          );
+          
+          products.add(product);
+        } catch (e) {
+          errors.add('Row ${i + 1}: $e');
+        }
+      }
+      
+      if (products.isEmpty) {
+        _showError('No valid products found');
+        return;
+      }
+      
+      setState(() {
+        _products = products;
+        _productCount = products.length;
+        _errorCount = errors.length;
+        _currentState = ImportState.confirming;
+      });
+      
+    } catch (e) {
+      _showError('File processing failed: $e');
+    }
+  }
+  
+  Future<void> _confirmImport() async {
+    setState(() {
+      _currentState = ImportState.importing;
+      _statusMessage = 'Clearing existing data...';
+    });
+    
+    try {
+      // Clear existing
+      final existingProducts = await DatabaseService.getAllProducts();
+      for (int i = 0; i < existingProducts.length; i++) {
+        await DatabaseService.deleteProduct(existingProducts[i].id);
+        if (i % 5 == 0 && existingProducts.length > 10) {
+          setState(() => _statusMessage = 'Clearing data... ${i + 1}/${existingProducts.length}');
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
+      }
+      
+      // Import new products
+      for (int i = 0; i < _products.length; i++) {
+        await DatabaseService.insertProduct(_products[i]);
+        if (i % 3 == 0) {
+          setState(() => _statusMessage = 'Importing... ${i + 1}/${_products.length}');
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+      
+      // Refresh app data
+      setState(() => _statusMessage = 'Refreshing data...');
+      if (mounted) {
+        await Provider.of<AppProvider>(context, listen: false).loadProducts();
+      }
+      
+      setState(() => _currentState = ImportState.success);
+      
+    } catch (e) {
+      _showError('Import failed: $e');
+    }
+  }
+  
+  void _showError(String message) {
+    setState(() {
+      _currentState = ImportState.error;
+      _statusMessage = message;
+    });
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            Text(
-              message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
+        title: const Text('Import from Excel'),
+        leading: _currentState == ImportState.importing 
+            ? null 
+            : IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please wait...',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
       ),
-    );
-  }
-  
-  void _updateProgress(BuildContext context, String message) {
-    // Close current dialog and show new one with updated message
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-    _showProgressDialog(context, message);
-  }
-  
-  void _closeProgress(BuildContext context) {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-  }
-  
-  void _showError(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error, color: Colors.red),
-            const SizedBox(width: 8),
-            Text(title, style: const TextStyle(color: Colors.red)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Future<bool> _showConfirmDialog(BuildContext context, int productCount, int errorCount) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Row(
-          children: [
-            Icon(Icons.upload_file, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text('Confirm Import', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber, color: Colors.orange, size: 48),
+            _buildStateIcon(),
+            const SizedBox(height: 24),
+            _buildStateTitle(),
             const SizedBox(height: 16),
-            Text(
-              'Ready to import $productCount products',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            if (errorCount > 0) ...[
+            _buildStateContent(),
+            const SizedBox(height: 32),
+            _buildActionButtons(),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildStateIcon() {
+    switch (_currentState) {
+      case ImportState.selecting:
+      case ImportState.validating:
+      case ImportState.importing:
+        return const CircularProgressIndicator(strokeWidth: 3);
+      case ImportState.confirming:
+        return const Icon(Icons.help_outline, size: 64, color: Colors.orange);
+      case ImportState.success:
+        return const Icon(Icons.check_circle, size: 64, color: Colors.green);
+      case ImportState.error:
+        return const Icon(Icons.error, size: 64, color: Colors.red);
+    }
+  }
+  
+  Widget _buildStateTitle() {
+    switch (_currentState) {
+      case ImportState.selecting:
+        return const Text('Selecting File', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold));
+      case ImportState.validating:
+        return const Text('Validating File', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold));
+      case ImportState.confirming:
+        return const Text('Confirm Import', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold));
+      case ImportState.importing:
+        return const Text('Importing Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold));
+      case ImportState.success:
+        return const Text('Import Successful', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green));
+      case ImportState.error:
+        return const Text('Import Failed', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red));
+    }
+  }
+  
+  Widget _buildStateContent() {
+    switch (_currentState) {
+      case ImportState.selecting:
+      case ImportState.validating:
+      case ImportState.importing:
+        return Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16));
+      case ImportState.confirming:
+        return Column(
+          children: [
+            Text('Ready to import $_productCount products', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+            if (_errorCount > 0) ...[
               const SizedBox(height: 8),
-              Text(
-                '$errorCount rows had errors and will be skipped',
-                style: const TextStyle(color: Colors.orange, fontSize: 14),
-              ),
+              Text('$_errorCount rows will be skipped due to errors', style: const TextStyle(color: Colors.orange)),
             ],
             const SizedBox(height: 16),
             Container(
@@ -760,132 +814,75 @@ class _BackupDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This will replace ALL existing products',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                  Icon(Icons.warning, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('This will replace ALL existing products', style: TextStyle(fontWeight: FontWeight.w500))),
                 ],
               ),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            child: const Text('Import Now', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
+        );
+      case ImportState.success:
+        return Column(
+          children: [
+            Text('$_productCount products imported successfully!', style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 8),
+            const Text('Database updated successfully', style: TextStyle(color: Colors.green)),
+            if (_errorCount > 0) ...[
+              const SizedBox(height: 8),
+              Text('$_errorCount rows were skipped', style: const TextStyle(color: Colors.orange)),
+            ],
+          ],
+        );
+      case ImportState.error:
+        return Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.red));
+    }
   }
   
-  void _showSuccess(BuildContext context, int productCount, int errorCount) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Row(
+  Widget _buildActionButtons() {
+    switch (_currentState) {
+      case ImportState.confirming:
+        return Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Import Successful', style: TextStyle(color: Colors.green)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_done, color: Colors.green, size: 64),
-            const SizedBox(height: 20),
-            Text(
-              '$productCount products imported successfully!',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.inventory, color: Colors.green, size: 18),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Database updated successfully',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (errorCount > 0) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '$errorCount rows were skipped due to errors',
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _confirmImport,
+                child: const Text('Import Now'),
               ),
             ),
           ],
-        ),
-        actions: [
-          ElevatedButton(
+        );
+      case ImportState.success:
+      case ImportState.error:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-            child: const Text('Done', style: TextStyle(color: Colors.white)),
+            child: const Text('Done'),
           ),
-        ],
-      ),
-    );
-    
-    // Also show snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✅ $productCount products imported successfully'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
+}
+
+enum ImportState {
+  selecting,
+  validating,
+  confirming,
+  importing,
+  success,
+  error,
 }
 
 class _AboutDialog extends StatelessWidget {

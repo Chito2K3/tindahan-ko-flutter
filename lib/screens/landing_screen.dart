@@ -130,10 +130,8 @@ class LandingScreen extends StatelessWidget {
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
       },
     );
   }
