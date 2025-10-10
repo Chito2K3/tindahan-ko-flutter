@@ -3,7 +3,9 @@ import os
 
 def create_tk_icon(size, filename):
     # Validate inputs
-    if '..' in filename or not isinstance(size, int) or size <= 0:
+    filename = os.path.abspath(os.path.normpath(filename))
+    web_dir = os.path.abspath('web')
+    if '..' in filename or not isinstance(size, int) or size <= 0 or not filename.startswith(web_dir):
         raise ValueError("Invalid parameters")
     
     # Create image with gradient background
@@ -48,16 +50,18 @@ def create_tk_icon(size, filename):
     # Draw main text
     draw.text((x, y), text, fill=(255, 255, 255, 255), font=font)
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    img.save(filename)
-    print(f"Created {filename}")
+    # Ensure directory exists and validate path
+    dir_path = os.path.dirname(filename)
+    if dir_path.startswith('web/'):
+        os.makedirs(dir_path, exist_ok=True)
+        img.save(filename)
+        print(f"Created {filename}")
 
 # Create different sizes
 sizes = [16, 32, 48, 96, 192, 512]
 for size in sizes:
-    create_tk_icon(size, f"web/icons/Icon-{size}.png")
+    create_tk_icon(size, os.path.abspath(f"web/icons/Icon-{size}.png"))
 
 # Create favicon.ico (16x16)
-create_tk_icon(16, "web/favicon.png")
+create_tk_icon(16, os.path.abspath("web/favicon.png"))
 print("All icons created successfully!")

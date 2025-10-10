@@ -114,31 +114,23 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // Tindahan Ko Text - Bigger Font
-                            Text(
-                              'Tindahan Ko',
-                              style: GoogleFonts.getFont(
-                                'Imperial Script',
-                                fontSize: 32,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w600,
+                            // Store Name - Responsive sizing
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  _storeName,
+                                  style: GoogleFonts.getFont(
+                                    'Imperial Script',
+                                    fontSize: 32,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Store Name - Below Logo, Bold and Emphasized
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Text(
-                            _storeName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
                         ),
                       ],
                     ),
