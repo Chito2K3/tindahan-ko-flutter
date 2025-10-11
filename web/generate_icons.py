@@ -3,10 +3,19 @@ import os
 
 def create_tk_icon(size, filename):
     # Validate inputs
+    if not isinstance(size, int) or size <= 0 or size > 2048:
+        raise ValueError("Invalid size parameter")
+    
+    if not isinstance(filename, str) or '..' in filename:
+        raise ValueError("Invalid filename parameter")
+    
+    # Sanitize and validate file path
+    project_root = os.path.abspath('.')
+    web_dir = os.path.join(project_root, 'web')
     filename = os.path.abspath(os.path.normpath(filename))
-    web_dir = os.path.abspath('web')
-    if '..' in filename or not isinstance(size, int) or size <= 0 or not filename.startswith(web_dir):
-        raise ValueError("Invalid parameters")
+    
+    if not filename.startswith(web_dir):
+        raise ValueError("File path outside web directory")
     
     # Create image with gradient background
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -52,16 +61,20 @@ def create_tk_icon(size, filename):
     
     # Ensure directory exists and validate path
     dir_path = os.path.dirname(filename)
-    if dir_path.startswith('web/'):
+    if filename.startswith(web_dir):
         os.makedirs(dir_path, exist_ok=True)
         img.save(filename)
-        print(f"Created {filename}")
+        print(f"Created icon: {os.path.basename(filename)}")
 
 # Create different sizes
 sizes = [16, 32, 48, 96, 192, 512]
+project_root = os.path.abspath('.')
+
 for size in sizes:
-    create_tk_icon(size, os.path.abspath(f"web/icons/Icon-{size}.png"))
+    icon_path = os.path.join(project_root, 'web', 'icons', f'Icon-{size}.png')
+    create_tk_icon(size, icon_path)
 
 # Create favicon.ico (16x16)
-create_tk_icon(16, os.path.abspath("web/favicon.png"))
+favicon_path = os.path.join(project_root, 'web', 'favicon.png')
+create_tk_icon(16, favicon_path)
 print("All icons created successfully!")

@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
+import '../services/excel_export_service.dart';
+import '../services/excel_import_service.dart';
 import '../models/product.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
@@ -330,94 +332,32 @@ class _BackupDialog extends StatelessWidget {
 
   Future<void> _exportData(BuildContext context) async {
     try {
-      // Request storage permission for Android
-      if (!kIsWeb && Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Storage permission required to export files'), backgroundColor: Colors.red),
-          );
-          return;
-        }
-      }
-      
       final products = await DatabaseService.getAllProducts();
-      
-      // Create Excel file
-      final excel = Excel.createExcel();
-      final sheet = excel['Products'];
-      
-      // Add headers
-      sheet.cell(CellIndex.indexByString('A1')).value = TextCellValue('ID');
-      sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('Name');
-      sheet.cell(CellIndex.indexByString('C1')).value = TextCellValue('Price');
-      sheet.cell(CellIndex.indexByString('D1')).value = TextCellValue('Stock');
-      sheet.cell(CellIndex.indexByString('E1')).value = TextCellValue('Category');
-      sheet.cell(CellIndex.indexByString('F1')).value = TextCellValue('Emoji');
-      sheet.cell(CellIndex.indexByString('G1')).value = TextCellValue('Reorder Level');
-      sheet.cell(CellIndex.indexByString('H1')).value = TextCellValue('Has Barcode');
-      sheet.cell(CellIndex.indexByString('I1')).value = TextCellValue('Barcode');
-      
-      // Add product data
-      for (int i = 0; i < products.length; i++) {
-        final product = products[i];
-        final row = i + 2;
-        
-        sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(product.id);
-        sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(product.name);
-        sheet.cell(CellIndex.indexByString('C$row')).value = DoubleCellValue(product.price);
-        sheet.cell(CellIndex.indexByString('D$row')).value = IntCellValue(product.stock);
-        sheet.cell(CellIndex.indexByString('E$row')).value = TextCellValue(product.category);
-        sheet.cell(CellIndex.indexByString('F$row')).value = TextCellValue(product.emoji);
-        sheet.cell(CellIndex.indexByString('G$row')).value = IntCellValue(product.reorderLevel);
-        sheet.cell(CellIndex.indexByString('H$row')).value = TextCellValue(product.hasBarcode ? 'YES' : 'NO');
-        sheet.cell(CellIndex.indexByString('I$row')).value = TextCellValue(product.barcode ?? '');
-      }
-      
-      // Save file
-      final bytes = excel.encode();
-      final now = DateTime.now();
-      final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-      final fileName = 'TindahanKo$dateStr.xlsx';
-      
-      if (kIsWeb) {
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = fileName;
-        html.document.body?.append(anchor);
-        anchor.click();
-        anchor.remove();
-        html.Url.revokeObjectUrl(url);
-      } else {
-        // For Android - save to Downloads folder
-        String filePath;
-        try {
-          // Try Downloads folder first (Android 10+)
-          final downloadsPath = '/storage/emulated/0/Download';
-          final downloadsDir = Directory(downloadsPath);
-          if (await downloadsDir.exists()) {
-            filePath = path.join(downloadsPath, fileName);
-          } else {
-            // Fallback for older Android versions
-            final directory = await getExternalStorageDirectory();
-            filePath = path.join(directory!.path, fileName);
-          }
-        } catch (e) {
-          // Final fallback
-          final directory = await getApplicationDocumentsDirectory();
-          filePath = path.join(directory.path, fileName);
-        }
-        
-        final file = File(filePath);
-        await file.writeAsBytes(bytes!);
-      }
       
       Navigator.pop(context);
       
-      final filePath = kIsWeb ? 'Downloads' : '/storage/emulated/0/Download';
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
+              Text('Exporting ${products.length} products...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            ],
+          ),
+        ),
+      );
+      
+      final filePath = await ExcelExportService.exportProducts(products);
+      
+      Navigator.pop(context); // Close loading dialog
+      
+      final fileName = filePath.split('/').last;
       
       showDialog(
         context: context,
@@ -429,13 +369,13 @@ class _BackupDialog extends StatelessWidget {
             children: [
               const Icon(Icons.check_circle, color: Colors.green, size: 48),
               const SizedBox(height: 16),
-              Text('Products exported to Excel successfully!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              Text('Products exported successfully!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               const SizedBox(height: 8),
               Text('${products.length} products exported', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               const SizedBox(height: 8),
               Text('File: $fileName', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
               const SizedBox(height: 8),
-              Text('Location: $filePath', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 11)),
+              Text('Location: Downloads folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 11)),
             ],
           ),
           actions: [
@@ -447,20 +387,8 @@ class _BackupDialog extends StatelessWidget {
         ),
       );
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('File saved to Downloads: $fileName'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'OK',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
     } catch (e) {
-      Navigator.pop(context);
+      Navigator.pop(context); // Close any open dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
       );
@@ -502,223 +430,104 @@ class _ImportWizardState extends State<_ImportWizard> {
   }
   
   Future<void> _startImport() async {
-    try {
-      // Check and request permissions only if needed
-      if (!kIsWeb && Platform.isAndroid) {
-        final storageStatus = await Permission.storage.status;
-        final manageStorageStatus = await Permission.manageExternalStorage.status;
-        
-        if (!storageStatus.isGranted && !manageStorageStatus.isGranted) {
-          setState(() {
-            _statusMessage = 'Requesting storage permission...';
-          });
-          
-          final storageResult = await Permission.storage.request();
-          final manageStorageResult = await Permission.manageExternalStorage.request();
-          
-          if (!storageResult.isGranted && !manageStorageResult.isGranted) {
-            _showError('Storage permission required to access files');
-            return;
-          }
-        }
-      }
-      
-      // File selection
-      setState(() {
-        _statusMessage = 'Opening file manager...';
-      });
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      FilePickerResult? result;
-      if (!kIsWeb && Platform.isAndroid) {
-        // Force file manager on Android by using FileType.any
-        // This bypasses the system picker and opens file manager directly
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.any, // This forces file manager instead of system picker
-          allowMultiple: false,
-          withData: true,
-          dialogTitle: 'Select Excel File from File Manager',
-        );
-        
-        // Validate file type after selection
-        if (result != null && result.files.isNotEmpty) {
-          final fileName = result.files.first.name.toLowerCase();
-          if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-            _showError('Invalid file type\n\nPlease select an Excel file (.xlsx or .xls)\n\nYou selected: ${result.files.first.name}');
-            return;
-          }
-        }
-      } else {
-        // Use normal file picker for web and iOS
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['xlsx'],
-          withData: true,
-        );
-      }
-      
-      if (result == null || result.files.isEmpty) {
-        Navigator.pop(context);
-        return;
-      }
-      
-      final file = result.files.first;
-      if (file.bytes == null) {
-        _showError('Could not read file');
-        return;
-      }
-      
-      await _processFile(file.bytes!);
-      
-    } catch (e) {
-      _showError('File selection failed: $e');
+    setState(() {
+      _statusMessage = 'Select Excel file...';
+    });
+    
+    final bytes = await ExcelImportService.pickAndReadExcelFile();
+    
+    if (bytes == null) {
+      _showError('No file selected');
+      return;
     }
+    
+    setState(() {
+      _statusMessage = 'Processing Excel file...';
+    });
+    
+    await _processFile(bytes);
   }
   
   Future<void> _processFile(List<int> bytes) async {
     try {
-      // Validation
-      setState(() {
-        _currentState = ImportState.validating;
-        _statusMessage = 'Validating Excel file...';
-      });
-      await Future.delayed(const Duration(milliseconds: 800));
-      
       final excel = Excel.decodeBytes(bytes);
-      final sheet = excel.tables['Products'];
       
-      if (sheet == null) {
-        _showError('No "Products" sheet found');
-        return;
+      // Look for "Products" sheet first, then use first non-empty sheet
+      Sheet? sheet = excel.tables['Products'];
+      if (sheet == null || sheet.maxRows < 2) {
+        // Find first sheet with data
+        for (final s in excel.tables.values) {
+          if (s.maxRows >= 2) {
+            sheet = s;
+            break;
+          }
+        }
       }
       
-      if (sheet.maxRows < 2) {
+      if (sheet == null || sheet.maxRows < 2) {
         _showError('Excel file is empty');
         return;
       }
       
-      // Header validation
-      setState(() => _statusMessage = 'Checking file structure...');
-      await Future.delayed(const Duration(milliseconds: 600));
-      
-      final headers = sheet.rows[0];
-      final expectedHeaders = ['ID', 'Name', 'Price', 'Stock', 'Category', 'Emoji', 'Reorder Level', 'Has Barcode', 'Barcode'];
-      
-      for (int i = 0; i < expectedHeaders.length && i < headers.length; i++) {
-        final headerValue = headers[i]?.value?.toString().trim() ?? '';
-        if (headerValue != expectedHeaders[i]) {
-          _showError('Invalid header in column ${String.fromCharCode(65 + i)}: Expected "${expectedHeaders[i]}", found "$headerValue"');
-          return;
-        }
-      }
-      
-      // Parse products
-      setState(() => _statusMessage = 'Processing products...');
-      await Future.delayed(const Duration(milliseconds: 600));
-      
       final products = <Product>[];
-      final errors = <String>[];
       
       for (int i = 1; i < sheet.maxRows; i++) {
         final row = sheet.rows[i];
-        if (row.isEmpty || (row.length > 1 && row[1]?.value?.toString().trim().isEmpty == true)) {
-          continue;
-        }
+        if (row.length < 4) continue;
         
-        try {
-          final name = row[1]?.value?.toString().trim() ?? '';
-          final priceStr = row[2]?.value?.toString() ?? '0';
-          final stockStr = row[3]?.value?.toString() ?? '0';
-          
-          if (name.isEmpty) {
-            errors.add('Row ${i + 1}: Product name required');
-            continue;
-          }
-          
-          final price = double.tryParse(priceStr);
-          if (price == null || price < 0) {
-            errors.add('Row ${i + 1}: Invalid price');
-            continue;
-          }
-          
-          final stock = int.tryParse(stockStr);
-          if (stock == null || stock < 0) {
-            errors.add('Row ${i + 1}: Invalid stock');
-            continue;
-          }
-          
-          final product = Product(
-            id: row[0]?.value?.toString().trim() ?? const Uuid().v4(),
+        final name = row[1]?.value?.toString();
+        final price = double.tryParse(row[2]?.value?.toString() ?? '0');
+        final stock = int.tryParse(row[3]?.value?.toString() ?? '0');
+        
+        if (name != null && price != null && stock != null) {
+          products.add(Product(
+            id: row[0]?.value?.toString() ?? const Uuid().v4(),
             name: name,
             price: price,
             stock: stock,
-            category: row[4]?.value?.toString().trim() ?? 'general',
-            emoji: row[5]?.value?.toString().trim() ?? '📦',
-            reorderLevel: int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5,
-            hasBarcode: row[7]?.value?.toString().trim().toUpperCase() == 'YES',
-            barcode: row[8]?.value?.toString().trim().isEmpty == true ? null : row[8]?.value?.toString().trim(),
-          );
-          
-          products.add(product);
-        } catch (e) {
-          errors.add('Row ${i + 1}: $e');
+            category: row.length > 4 ? row[4]?.value?.toString() ?? 'general' : 'general',
+            emoji: row.length > 5 ? row[5]?.value?.toString() ?? '📦' : '📦',
+            reorderLevel: row.length > 6 ? int.tryParse(row[6]?.value?.toString() ?? '5') ?? 5 : 5,
+            hasBarcode: row.length > 7 ? row[7]?.value?.toString()?.toUpperCase() == 'YES' : false,
+            barcode: row.length > 8 ? row[8]?.value?.toString() : null,
+          ));
         }
-      }
-      
-      if (products.isEmpty) {
-        _showError('No valid products found');
-        return;
       }
       
       setState(() {
         _products = products;
         _productCount = products.length;
-        _errorCount = errors.length;
         _currentState = ImportState.confirming;
       });
       
     } catch (e) {
-      _showError('File processing failed: $e');
+      _showError('Invalid Excel file');
     }
   }
   
   Future<void> _confirmImport() async {
     setState(() {
       _currentState = ImportState.importing;
-      _statusMessage = 'Clearing existing data...';
+      _statusMessage = 'Importing products...';
     });
     
-    try {
-      // Clear existing
-      final existingProducts = await DatabaseService.getAllProducts();
-      for (int i = 0; i < existingProducts.length; i++) {
-        await DatabaseService.deleteProduct(existingProducts[i].id);
-        if (i % 5 == 0 && existingProducts.length > 10) {
-          setState(() => _statusMessage = 'Clearing data... ${i + 1}/${existingProducts.length}');
-          await Future.delayed(const Duration(milliseconds: 50));
-        }
-      }
-      
-      // Import new products
-      for (int i = 0; i < _products.length; i++) {
-        await DatabaseService.insertProduct(_products[i]);
-        if (i % 3 == 0) {
-          setState(() => _statusMessage = 'Importing... ${i + 1}/${_products.length}');
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-      }
-      
-      // Refresh app data
-      setState(() => _statusMessage = 'Refreshing data...');
-      if (mounted) {
-        await Provider.of<AppProvider>(context, listen: false).loadProducts();
-      }
-      
-      setState(() => _currentState = ImportState.success);
-      
-    } catch (e) {
-      _showError('Import failed: $e');
+    // Clear existing products
+    final existingProducts = await DatabaseService.getAllProducts();
+    for (final product in existingProducts) {
+      await DatabaseService.deleteProduct(product.id);
     }
+    
+    // Import new products
+    for (final product in _products) {
+      await DatabaseService.insertProduct(product);
+    }
+    
+    // Refresh app data
+    if (mounted) {
+      await Provider.of<AppProvider>(context, listen: false).loadProducts();
+    }
+    
+    setState(() => _currentState = ImportState.success);
   }
   
   void _showError(String message) {
@@ -799,43 +608,9 @@ class _ImportWizardState extends State<_ImportWizard> {
       case ImportState.importing:
         return Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16));
       case ImportState.confirming:
-        return Column(
-          children: [
-            Text('Ready to import $_productCount products', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-            if (_errorCount > 0) ...[
-              const SizedBox(height: 8),
-              Text('$_errorCount rows will be skipped due to errors', style: const TextStyle(color: Colors.orange)),
-            ],
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('This will replace ALL existing products', style: TextStyle(fontWeight: FontWeight.w500))),
-                ],
-              ),
-            ),
-          ],
-        );
+        return Text('Ready to import $_productCount products', style: const TextStyle(fontSize: 18));
       case ImportState.success:
-        return Column(
-          children: [
-            Text('$_productCount products imported successfully!', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 8),
-            const Text('Database updated successfully', style: TextStyle(color: Colors.green)),
-            if (_errorCount > 0) ...[
-              const SizedBox(height: 8),
-              Text('$_errorCount rows were skipped', style: const TextStyle(color: Colors.orange)),
-            ],
-          ],
-        );
+        return Text('$_productCount products imported successfully!', style: const TextStyle(fontSize: 18, color: Colors.green));
       case ImportState.error:
         return Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.red));
     }
